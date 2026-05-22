@@ -1,0 +1,13 @@
+.git
+.github
+.codex
+.agents
+node_modules
+.npm-cache
+dist
+backend/.env
+backend/staticfiles
+__pycache__
+*.py[cod]
+*.sqlite3
+*.local

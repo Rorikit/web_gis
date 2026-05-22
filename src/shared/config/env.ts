@@ -8,17 +8,30 @@ export type ApiModule =
   | 'reports'
   | 'exports';
 
+const ALL_API_MODULES: ApiModule[] = [
+  'auth',
+  'damages',
+  'orders',
+  'gis',
+  'users',
+  'audit',
+  'reports',
+  'exports',
+];
+
+const API_MODULE_SET = new Set<ApiModule>(ALL_API_MODULES);
+
 const parseBoolean = (value: string | undefined, fallback: boolean) => {
   if (value === undefined) return fallback;
   return value.toLowerCase() === 'true';
 };
 
 const parseModuleSet = (value: string | undefined): Set<ApiModule> => {
-  const source = value ?? 'auth,damages,orders,gis,users,audit,reports,exports';
+  const source = value ?? 'reports,exports';
   const modules = source
     .split(',')
     .map((part) => part.trim())
-    .filter(Boolean) as ApiModule[];
+    .filter((part): part is ApiModule => API_MODULE_SET.has(part as ApiModule));
 
   return new Set<ApiModule>(modules);
 };

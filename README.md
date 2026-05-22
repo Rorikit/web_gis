@@ -87,7 +87,7 @@ VITE_API_URL=http://127.0.0.1:8000
 VITE_GIS_API_URL=https://gis.example.local
 VITE_APP_NAME=Система учета повреждений теплосетей
 VITE_ENABLE_MOCK_FALLBACK=true
-VITE_MOCK_FALLBACK_MODULES=auth,damages,orders,gis,users,audit,reports,exports
+VITE_MOCK_FALLBACK_MODULES=reports,exports
 ```
 
 Описание:
@@ -99,6 +99,7 @@ VITE_MOCK_FALLBACK_MODULES=auth,damages,orders,gis,users,audit,reports,exports
 - `VITE_ENABLE_MOCK_FALLBACK` - глобальное включение fallback на mockStore.
 - `VITE_MOCK_FALLBACK_MODULES` - список модулей fallback через запятую:
   `auth, damages, orders, gis, users, audit, reports, exports`.
+  Текущее рекомендуемое значение: `reports,exports`.
 
 ### 4. Запуск frontend
 
@@ -155,6 +156,22 @@ curl -X POST http://127.0.0.1:8000/auth/ldap/login \
   -H 'Content-Type: application/json' \
   -d '{\"ldapLogin\":\"admin\",\"password\":\"admin\"}'
 ```
+
+## Единый Docker-старт (frontend + backend в одном контейнере)
+
+Для локальной разработки можно запускать frontend и backend одной командой:
+
+```bash
+cp backend/.env.example backend/.env
+docker compose -f docker-compose.fullstack.yml up --build
+```
+
+Доступ после старта:
+
+- frontend: `http://127.0.0.1:5173`
+- backend API: `http://127.0.0.1:8000`
+
+Этот сценарий предназначен для dev-режима. Для production лучше разделять сервисы по контейнерам.
 
 ## Команды проекта
 
@@ -264,14 +281,14 @@ npm run preview    # локальный preview production-сборки
 - API недоступен по сети;
 - backend вернул `404` с `text/html`.
 
-Для поэтапной интеграции (пункт 5 плана) fallback можно выключать точечно через
-`VITE_MOCK_FALLBACK_MODULES`, например:
+Текущий рекомендуемый режим для работы frontend с backend задается через
+`VITE_MOCK_FALLBACK_MODULES`:
 
 ```env
 VITE_MOCK_FALLBACK_MODULES=reports,exports
 ```
 
-Такой режим означает:
+Этот режим означает:
 
 - `auth/damages/orders/gis/users/audit` работают только через реальный backend;
 - fallback остается только для еще не реализованных серверных модулей (`reports/exports`).
