@@ -1,6 +1,9 @@
 import axios from 'axios';
+import type { ApiModule } from '@/shared/config/env';
+import { isMockFallbackEnabledFor } from '@/shared/config/env';
 
-export const shouldUseMockFallback = (error: unknown) => {
+export const shouldUseMockFallback = (error: unknown, module: ApiModule) => {
+  if (!isMockFallbackEnabledFor(module)) return false;
   if (!axios.isAxiosError(error)) return false;
   if (!error.response) return true;
 
@@ -10,3 +13,11 @@ export const shouldUseMockFallback = (error: unknown) => {
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+export const fallbackOrThrow = <T>(module: ApiModule, message: string, fallbackFactory: () => T): T => {
+  if (!isMockFallbackEnabledFor(module)) {
+    throw new Error(message);
+  }
+
+  return fallbackFactory();
+};

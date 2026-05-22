@@ -9,7 +9,7 @@ export const exportsApi = {
       const { data } = await httpClient.post(endpoints.exports.currentTable, payload, { responseType: 'blob' });
       return data;
     } catch (error) {
-      if (!shouldUseMockFallback(error)) throw error;
+      if (!shouldUseMockFallback(error, 'exports')) throw error;
       return textBlob('Экспорт текущей таблицы', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
   },
