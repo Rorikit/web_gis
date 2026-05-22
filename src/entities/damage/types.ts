@@ -1,0 +1,44 @@
+import type { GisPoint } from '@/entities/gis-point/types';
+import type { Photo } from '@/entities/photo/types';
+
+export type NetworkType = 'ОТ' | 'ГВС';
+export type DamageType = 'Текущее' | 'Гидравлическое';
+export type OrderKind = 'Текущий' | 'Гарантийный';
+export type AreaState = 'В РАБОТЕ' | 'ГОТОВ К ЗАКРЫТИЮ';
+export type ContractorType = 'Подрядчик' | 'УРТС' | 'Участок';
+
+export type Damage = {
+  id: string;
+  districtId: string;
+  address: string;
+  networkType: NetworkType;
+  detectedAt: string;
+  fixedAt: string | null;
+  orderNumber: string;
+  orderOpenedAt: string;
+  orderValidUntil: string;
+  heatSource: string;
+  damageType: DamageType;
+  disconnectedConsumers: number;
+  damageDescription: string;
+  orderKind: OrderKind;
+  greenZoneArea: number;
+  asphaltArea: number;
+  improvementMain: boolean;
+  improvementInnerRoad: boolean;
+  improvementSidewalk: boolean;
+  improvementBlindArea: boolean;
+  curbCount: number;
+  areaState: AreaState;
+  contractorType: ContractorType;
+  contractNumber: string;
+  contractorRequestDate: string | null;
+  plannedFinishDate: string | null;
+  note: string;
+  orderClosedAt: string | null;
+  gisPoint: GisPoint | null;
+  photos: Photo[];
+  createdAt: string;
+  updatedAt: string;
+  archived: boolean;
+};
