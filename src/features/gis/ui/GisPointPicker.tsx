@@ -4,6 +4,7 @@ import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
 import { toLonLat, fromLonLat } from 'ol/proj';
+import { ryazanMapCenter, toLonLatPair } from '@/shared/constants/map';
 import { Button, Modal } from '@/shared/ui';
 
 export const GisPointPicker = ({
@@ -23,7 +24,7 @@ export const GisPointPicker = ({
     const map = new Map({
       target: ref.current,
       layers: [new TileLayer({ source: new OSM() })],
-      view: new View({ center: fromLonLat([37.6173, 55.7558]), zoom: 11 }),
+      view: new View({ center: fromLonLat(toLonLatPair()), zoom: ryazanMapCenter.zoom }),
     });
     map.on('click', (event) => {
       const [longitude, latitude] = toLonLat(event.coordinate);
@@ -34,7 +35,7 @@ export const GisPointPicker = ({
 
   return (
     <Modal open={open} title="Указать точку на карте" onClose={onClose}>
-      <div className="gis-map" ref={ref} style={{ height: 460 }} />
+      <div className="gis-map" ref={ref} style={{ height: 560 }} />
       <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>{point ? `${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}` : 'Выберите точку кликом на карте'}</span>
         <Button disabled={!point} onClick={() => point && onSave(point)}>Сохранить точку</Button>

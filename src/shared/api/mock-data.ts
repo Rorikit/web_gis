@@ -65,8 +65,8 @@ export const mockDamages: Damage[] = [
     gisPoint: {
       id: 'gp-1',
       address: 'ул. Ленина, 12',
-      latitude: 55.7558,
-      longitude: 37.6173,
+      latitude: 54.6292,
+      longitude: 39.7364,
       gisObjectId: 'GIS-001',
       mapUrl: 'https://maps.example.local/GIS-001',
     },
