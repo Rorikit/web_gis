@@ -83,9 +83,11 @@ cp .env.example .env
 Пример `.env`:
 
 ```env
-VITE_API_URL=https://api.example.local
+VITE_API_URL=http://127.0.0.1:8000
 VITE_GIS_API_URL=https://gis.example.local
 VITE_APP_NAME=Система учета повреждений теплосетей
+VITE_ENABLE_MOCK_FALLBACK=true
+VITE_MOCK_FALLBACK_MODULES=auth,damages,orders,gis,users,audit,reports,exports
 ```
 
 Описание:
@@ -94,6 +96,9 @@ VITE_APP_NAME=Система учета повреждений теплосет�
 - `VITE_GIS_API_URL` - зарезервированный URL GIS API (в текущем коде не используется отдельным клиентом);
 - `VITE_APP_NAME` - название системы в topbar;
 - `VITE_BASE_PATH` - опциональный base path для сборки (например `/web_gis/` для GitHub Pages).
+- `VITE_ENABLE_MOCK_FALLBACK` - глобальное включение fallback на mockStore.
+- `VITE_MOCK_FALLBACK_MODULES` - список модулей fallback через запятую:
+  `auth, damages, orders, gis, users, audit, reports, exports`.
 
 ### 4. Запуск frontend
 
@@ -258,6 +263,18 @@ npm run preview    # локальный preview production-сборки
 
 - API недоступен по сети;
 - backend вернул `404` с `text/html`.
+
+Для поэтапной интеграции (пункт 5 плана) fallback можно выключать точечно через
+`VITE_MOCK_FALLBACK_MODULES`, например:
+
+```env
+VITE_MOCK_FALLBACK_MODULES=reports,exports
+```
+
+Такой режим означает:
+
+- `auth/damages/orders/gis/users/audit` работают только через реальный backend;
+- fallback остается только для еще не реализованных серверных модулей (`reports/exports`).
 
 Mock-данные: `src/shared/api/mock-data.ts`.
 
