@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
+import Feature from 'ol/Feature';
 import Map from 'ol/Map';
 import View from 'ol/View';
+import Point from 'ol/geom/Point';
 import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
-import VectorSource from 'ol/source/Vector';
-import OSM from 'ol/source/OSM';
-import Feature from 'ol/Feature';
-import Point from 'ol/geom/Point';
 import { fromLonLat } from 'ol/proj';
+import OSM from 'ol/source/OSM';
+import VectorSource from 'ol/source/Vector';
 import { Circle, Fill, Stroke, Style } from 'ol/style';
 import type { Order } from '@/entities';
+import { ryazanMapCenter, toLonLatPair } from '@/shared/constants/map';
 import { Button } from '@/shared/ui';
 
 const markerStyle = (color: string) =>
   new Style({
     image: new Circle({
-      radius: 7,
+      radius: 8,
       fill: new Fill({ color }),
       stroke: new Stroke({ color: '#ffffff', width: 2 }),
     }),
@@ -39,19 +40,22 @@ export const GisMap = ({ orders }: { orders: Order[] }) => {
       feature.setStyle(markerStyle(colorByOrder(order)));
       source.addFeature(feature);
     });
+
     const map = new Map({
       target: ref.current,
       layers: [new TileLayer({ source: new OSM() }), new VectorLayer({ source })],
-      view: new View({ center: fromLonLat([37.6173, 55.7558]), zoom: 10 }),
+      view: new View({ center: fromLonLat(toLonLatPair()), zoom: ryazanMapCenter.zoom }),
     });
+
     map.on('pointermove', (event) => {
-      const hit = map.hasFeatureAtPixel(event.pixel);
-      map.getTargetElement().title = hit ? String(map.forEachFeatureAtPixel(event.pixel, (feature) => feature.get('order')?.address ?? '')) : '';
+      const title = map.forEachFeatureAtPixel(event.pixel, (feature) => feature.get('order')?.address ?? '');
+      map.getTargetElement().title = String(title ?? '');
     });
     map.on('click', (event) => {
-      const feature = map.forEachFeatureAtPixel(event.pixel, (item) => item);
-      setSelected(feature?.get('order') ?? null);
+      const order = map.forEachFeatureAtPixel(event.pixel, (feature) => feature.get('order') as Order);
+      setSelected(order ?? null);
     });
+
     return () => map.setTarget(undefined);
   }, [orders]);
 
@@ -61,7 +65,12 @@ export const GisMap = ({ orders }: { orders: Order[] }) => {
         <div className="gis-popup">
           <strong>{selected.orderNumber}</strong>
           <p>{selected.address}</p>
-          <p>{selected.orderKind} · {selected.areaState}</p>
+          <div className="details-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            <div className="details-item"><span>Тип</span>{selected.orderKind}</div>
+            <div className="details-item"><span>Состояние</span>{selected.areaState}</div>
+            <div className="details-item"><span>Исполнитель</span>{selected.contractorName}</div>
+            <div className="details-item"><span>Открыт до</span>{selected.validUntil}</div>
+          </div>
           <Button variant="secondary" onClick={() => window.location.assign(`/orders/${selected.id}`)}>Открыть запись</Button>
         </div>
       )}
