@@ -1,45 +1,65 @@
-# Система учета повреждений теплосетей (Frontend)
+# Система учета повреждений теплосетей
 
-SPA-приложение для учета повреждений теплосетей, работы с ордерами, просмотра GIS-точек и формирования отчетов.
+Проект состоит из двух частей:
 
-## Что умеет приложение
+- frontend SPA на `React + TypeScript`;
+- backend-каркас на `Django + DRF` (в стадии интеграции по `API_CONTRACT.md`).
 
-- LDAP-вход пользователя (через API `auth`)
-- Разделы:
-  - активные/архивные повреждения
-  - активные/архивные ордера
-  - GIS-карта ордеров
-  - карточки повреждения и ордера
-  - администрирование пользователей
-  - формирование отчетов (`XLSX`, `DOCX`)
-- Ролевая модель доступа (`district_damage`, `district_order`, `oopppr`, `full_access`, `admin`)
-- Ограничение доступа по району
-- Fallback на мок-данные при недоступности backend в dev-сценариях
+## Текущее состояние
+
+- Frontend реализует страницы, роли, маршруты, таблицы, GIS-карту и экспортные сценарии.
+- Backend пока содержит инфраструктурный каркас и базовый health endpoint `GET /health/`.
+- При недоступности backend frontend использует mock fallback для большинства API-модулей.
+
+## Функциональность frontend
+
+- экран входа (LDAP-сценарий предусмотрен API-контрактом);
+- разделы:
+  - активные/архивные повреждения;
+  - активные/архивные ордера;
+  - GIS-карта ордеров;
+  - карточки повреждения и ордера;
+  - администрирование пользователей;
+  - формирование отчетов (`XLSX`, `DOCX`);
+- ролевая модель доступа (`district_damage`, `district_order`, `oopppr`, `full_access`, `admin`);
+- ограничение доступа по району.
 
 ## Технологии
+
+### Frontend
 
 - `React 19` + `TypeScript`
 - `Vite 6`
 - `React Router 7`
-- `@tanstack/react-query`
-- `@tanstack/react-table`
-- `OpenLayers` (`ol`) для карт
+- `@tanstack/react-query`, `@tanstack/react-table`
+- `OpenLayers` (`ol`)
 - `axios`, `react-hook-form`, `zod`, `zustand`
-- Экспорт документов: `xlsx`, `docx`
+- `xlsx`, `docx`
+
+### Backend
+
+- `Django 5.2+`
+- `Django REST Framework`
+- `django-cors-headers`
+- `PostgreSQL/PostGIS`
+- `Redis`
 
 ## Требования
 
-- `Node.js` 20+ (в CI используется Node 24)
+- `Node.js` 20+ (`CI` использует Node 24)
 - `npm` 10+
+- `Docker` + `Docker Compose` (для backend-окружения)
 
 Проверка версий:
 
 ```bash
 node -v
 npm -v
+docker --version
+docker compose version
 ```
 
-## Быстрый старт
+## Быстрый старт frontend
 
 ### 1. Клонирование
 
@@ -54,9 +74,7 @@ cd web_gis
 npm ci
 ```
 
-### 3. Настройка переменных окружения
-
-Создайте `.env` из шаблона:
+### 3. Настройка переменных окружения frontend
 
 ```bash
 cp .env.example .env
@@ -70,99 +88,132 @@ VITE_GIS_API_URL=https://gis.example.local
 VITE_APP_NAME=Система учета повреждений теплосетей
 ```
 
-Описание переменных:
+Описание:
 
-- `VITE_API_URL` - базовый URL основного API (используется `axios`-клиентом)
-- `VITE_GIS_API_URL` - URL GIS API (зарезервирован в конфигурации)
-- `VITE_APP_NAME` - название системы в верхней панели
-- `VITE_BASE_PATH` - необязательный base path для сборки (например, `/web_gis/` для GitHub Pages)
+- `VITE_API_URL` - базовый URL API;
+- `VITE_GIS_API_URL` - зарезервированный URL GIS API (в текущем коде не используется отдельным клиентом);
+- `VITE_APP_NAME` - название системы в topbar;
+- `VITE_BASE_PATH` - опциональный base path для сборки (например `/web_gis/` для GitHub Pages).
 
-### 4. Запуск dev-сервера
+### 4. Запуск frontend
 
 ```bash
 npm run dev
 ```
 
-По умолчанию Vite поднимается на `http://127.0.0.1:5173`.
+Vite по умолчанию стартует на `http://127.0.0.1:5173`.
 
-### 5. Логин в dev
+## Быстрый старт backend (Docker)
 
-На странице входа дефолтно подставлен пользователь `admin`. Если backend недоступен и срабатывает mock fallback, вход выполнится на мок-пользователе.
+### 1. Настройка backend env
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+### 2. Запуск backend + PostGIS + Redis
+
+```bash
+docker compose -f docker-compose.backend.yml up --build
+```
+
+### 3. Проверка health endpoint
+
+```bash
+curl http://127.0.0.1:8000/health/
+```
+
+Ожидаемый ответ при доступной БД:
+
+```json
+{
+  "status": "ok",
+  "services": {
+    "database": "ok"
+  }
+}
+```
+
+Если БД недоступна, endpoint возвращает `503` и `database: error`.
 
 ## Команды проекта
 
+### Frontend
+
 ```bash
-npm run dev        # запуск локального dev-сервера
+npm run dev        # запуск dev-сервера
 npm run typecheck  # проверка TypeScript
 npm run lint       # проверка ESLint
-npm run build      # production-сборка (включая fallback 404.html)
-npm run preview    # локальный просмотр production-сборки
+npm run build      # production-сборка + создание dist/404.html
+npm run preview    # локальный preview production-сборки
 ```
 
-## Сборка и production-запуск
+## API Contract
 
-### Production-сборка
+Файл `API_CONTRACT.md` - это единый контракт между frontend и backend:
 
-```bash
-npm run build
-```
+- endpoint-ы;
+- payload-ы;
+- форматы ответов;
+- коды ошибок;
+- требования по ролям и доступу.
 
-Что делает скрипт:
+Почему его важно обновлять при изменениях:
 
-1. `tsc -b` - проверка/сборка TypeScript-проектов
-2. `vite build` - сборка фронтенда в `dist/`
-3. `node scripts/copy-spa-fallback.mjs` - копирует `dist/index.html` в `dist/404.html` (нужно для SPA-fallback на статическом хостинге)
-
-### Локальный preview сборки
-
-```bash
-npm run preview
-```
+- чтобы frontend и backend не расходились по форматам;
+- чтобы изменения API не ломали существующие экраны;
+- чтобы у команды был один источник истины для разработки и ревью.
 
 ## Структура проекта
 
 ```text
 .
+├── backend/
+│   ├── apps/
+│   │   └── health/
+│   ├── config/
+│   ├── .env.example
+│   ├── Dockerfile
+│   ├── entrypoint.sh
+│   ├── manage.py
+│   └── requirements.txt
 ├── .env.example
 ├── .github/
 │   └── workflows/
 │       └── pages.yml
+├── API_CONTRACT.md
+├── docker-compose.backend.yml
 ├── scripts/
 │   └── copy-spa-fallback.mjs
 ├── src/
 │   ├── app/
-│   │   ├── guards/
-│   │   ├── layouts/
-│   │   ├── providers/
-│   │   ├── router/
-│   │   └── App.tsx
 │   ├── entities/
 │   ├── features/
 │   ├── pages/
 │   ├── shared/
 │   └── widgets/
 ├── index.html
-├── vite.config.ts
-├── tsconfig*.json
-└── package.json
+├── package.json
+└── vite.config.ts
 ```
 
-### Назначение ключевых директорий
+Назначение ключевых директорий:
 
-- `src/app` - каркас приложения: роутинг, layout, guards, глобальные провайдеры
-- `src/pages` - страницы, привязанные к маршрутам
-- `src/features` - прикладная логика и hooks по доменам (`damages`, `orders`, `gis`, `users`, `reports`)
-- `src/widgets` - крупные композиционные UI-блоки (`AppShell`, карточки, панели)
-- `src/entities` - типы доменных сущностей (`Damage`, `Order`, `User`, ...)
-- `src/shared` - переиспользуемые компоненты, API-клиенты, конфиги, константы, утилиты
-- `scripts` - утилиты сборки и деплоя
+- `src/app` - каркас frontend-приложения (router/layout/providers/guards);
+- `src/pages` - страницы, привязанные к маршрутам;
+- `src/features` - прикладная логика и hooks по доменам;
+- `src/widgets` - крупные UI-композиции;
+- `src/entities` - доменные типы;
+- `src/shared` - общий UI, API-клиенты, конфиги, утилиты;
+- `backend` - каркас Django backend и его конфигурация;
+- `scripts` - скрипты сборки и вспомогательные утилиты.
 
-## Маршруты и доступы
+## Маршруты frontend
 
-Базовые маршруты задаются в `src/app/router/router.tsx`.
+Маршруты описаны в `src/app/router/router.tsx`:
 
-- `/auth` - авторизация
-- `/dashboard` - главная
+- `/auth`
+- `/dashboard`
 - `/damages`, `/damages/archive`, `/damages/:id`
 - `/orders`, `/orders/archive`, `/orders/:id`
 - `/map/orders`
@@ -173,44 +224,34 @@ npm run preview
 
 Контроль доступа:
 
-- `AuthGuard` - проверка факта авторизации
-- `RoleGuard` - проверка прав на раздел
-- проверка районов для карточек записей
+- `AuthGuard`;
+- `RoleGuard`;
+- проверка доступа по району.
 
-## Работа с API и mock fallback
+## API и mock fallback
 
-Основной HTTP-клиент расположен в `src/shared/api/http-client.ts` и использует `VITE_API_URL`.
+Основной HTTP-клиент frontend находится в `src/shared/api/http-client.ts` и использует `VITE_API_URL`.
 
 Поведение при ошибках:
 
-- `401` -> редирект на `/auth`
-- `403` -> редирект на `/access-denied`
+- `401` -> редирект на `/auth`;
+- `403` -> редирект на `/access-denied`.
 
-Во многих API-модулях (`damages`, `orders`, `gis`, `users`, `auth`, `reports`, `exports`, `audit`) реализован fallback на `mockStore`, если:
+Во многих API-модулях реализован fallback на `mockStore`, если:
 
-- API недоступен по сети
-- backend вернул `404` с `text/html` (типичный случай, когда запрос ушел не в API, а в статическую страницу)
+- API недоступен по сети;
+- backend вернул `404` с `text/html`.
 
-Mock-данные находятся в `src/shared/api/mock-data.ts`.
+Mock-данные: `src/shared/api/mock-data.ts`.
 
-## API Contract
-
-В репозитории добавлен файл `API_CONTRACT.md` - это актуальный контракт между фронтендом и backend (endpoint-ы, payload-ы, форматы ответов и коды ошибок).
-
-Почему его нужно обновлять:
-
-- чтобы фронтенд и backend не расходились по структуре запросов/ответов;
-- чтобы при изменении API не ломались существующие экраны и интеграции;
-- чтобы команда имела единый источник истины при разработке и ревью.
-
-## Деплой
+## Деплой frontend
 
 В репозитории есть workflow `.github/workflows/pages.yml`:
 
-- запускается на `push` в `main`
-- выполняет `npm ci`, `typecheck`, `lint`, `build`
-- собирает с `VITE_BASE_PATH=/web_gis/`
-- деплоит `dist/` на GitHub Pages
+- запуск на `push` в `main`;
+- `npm ci`, `typecheck`, `lint`, `build`;
+- сборка с `VITE_BASE_PATH=/web_gis/`;
+- деплой `dist/` на GitHub Pages.
 
 ## Частые проблемы
 
@@ -218,23 +259,25 @@ Mock-данные находятся в `src/shared/api/mock-data.ts`.
 
 Проверьте версии `node`/`npm` и доступ к npm registry.
 
-### После деплоя открывается пустая страница или 404
-
-Убедитесь, что:
-
-- задан корректный `VITE_BASE_PATH`
-- в `dist/` есть `404.html` (создается скриптом `copy-spa-fallback.mjs`)
-
-### Данные не приходят с backend
+### После деплоя frontend открывается пустая страница или 404
 
 Проверьте:
 
-- `VITE_API_URL` в `.env`
-- CORS/куки на backend (клиент работает с `withCredentials: true`)
-- ответы API на ожидаемых endpoint-ах
+- корректность `VITE_BASE_PATH`;
+- наличие `dist/404.html` (создается `scripts/copy-spa-fallback.mjs`).
 
-## Полезно для разработки
+### Frontend не получает данные с backend
 
-- Алиас `@` указывает на `src` (см. `vite.config.ts` и `tsconfig.app.json`)
-- Глобальные стили: `src/shared/styles/global.css`
-- Ключи React Query: `src/shared/types/query.ts`
+Проверьте:
+
+- `VITE_API_URL` в `.env`;
+- CORS/cookie-настройки backend;
+- соответствие backend контракту в `API_CONTRACT.md`.
+
+### Backend не стартует через Docker
+
+Проверьте:
+
+- наличие `backend/.env`;
+- что порты `5432`, `6379`, `8000` не заняты;
+- логи: `docker compose -f docker-compose.backend.yml logs -f backend`.

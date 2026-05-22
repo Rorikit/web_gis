@@ -5,3 +5,9 @@ dist
 *.local
 .codex
 .agents
+__pycache__/
+*.py[cod]
+*.sqlite3
+.venv/
+backend/.env
+backend/staticfiles/
