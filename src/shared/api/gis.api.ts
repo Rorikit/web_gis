@@ -24,6 +24,9 @@ export const gisApi = {
     }
   },
   async saveDamagePoint(damageId: string, point: Pick<GisPoint, 'latitude' | 'longitude'>): Promise<Damage> {
+    if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude)) {
+      throw new Error('Некорректные координаты GIS-точки');
+    }
     try {
       const { data } = await httpClient.post<unknown>(endpoints.gis.createDamagePoint(damageId), point);
       return isRecord(data) && typeof data.id === 'string' ? (data as Damage) : mockStore.saveDamagePoint(damageId, point);
@@ -33,6 +36,9 @@ export const gisApi = {
     }
   },
   async updateDamagePoint(damageId: string, point: Pick<GisPoint, 'latitude' | 'longitude'>): Promise<Damage> {
+    if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude)) {
+      throw new Error('Некорректные координаты GIS-точки');
+    }
     try {
       const { data } = await httpClient.put<unknown>(endpoints.gis.updateDamagePoint(damageId), point);
       return isRecord(data) && typeof data.id === 'string' ? (data as Damage) : mockStore.saveDamagePoint(damageId, point);

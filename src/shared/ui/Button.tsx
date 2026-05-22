@@ -6,8 +6,8 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
 };
 
-export const Button = ({ children, variant = 'primary', className = '', ...props }: PropsWithChildren<ButtonProps>) => (
-  <button className={`button button--${variant} ${className}`} {...props}>
+export const Button = ({ children, variant = 'primary', className = '', type = 'button', ...props }: PropsWithChildren<ButtonProps>) => (
+  <button className={`button button--${variant} ${className}`} type={type} {...props}>
     {children}
   </button>
 );
