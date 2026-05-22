@@ -16,9 +16,10 @@ class AuthApiTests(APITestCase):
         profile.full_name = 'Администратор системы'
         profile.save(update_fields=['role', 'full_name'])
 
-    def test_me_requires_auth(self):
+    def test_me_returns_null_for_anonymous(self):
         response = self.client.get(reverse('auth-me'))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.json())
 
     def test_login_returns_user_payload(self):
         response = self.client.post(
@@ -48,4 +49,5 @@ class AuthApiTests(APITestCase):
         self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
 
         me_response = self.client.get(reverse('auth-me'))
-        self.assertEqual(me_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(me_response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(me_response.json())

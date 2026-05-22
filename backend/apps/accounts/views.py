@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, login, logout
+from django.http import JsonResponse
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -39,7 +40,9 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
+        if not request.user.is_authenticated:
+            return JsonResponse(None, safe=False, status=status.HTTP_200_OK)
         return Response(serialize_user(request.user), status=status.HTTP_200_OK)

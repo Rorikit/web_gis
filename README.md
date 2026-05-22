@@ -3,12 +3,12 @@
 Проект состоит из двух частей:
 
 - frontend SPA на `React + TypeScript`;
-- backend-каркас на `Django + DRF` (в стадии интеграции по `API_CONTRACT.md`).
+- backend на `Django + DRF` (реализуется по `API_CONTRACT.md`).
 
 ## Текущее состояние
 
 - Frontend реализует страницы, роли, маршруты, таблицы, GIS-карту и экспортные сценарии.
-- Backend пока содержит инфраструктурный каркас и базовый health endpoint `GET /health/`.
+- Backend содержит auth/roles и MVP API для `damages`, `orders`, `gis`, `users`, `audit`, плюс `GET /health/`.
 - При недоступности backend frontend использует mock fallback для большинства API-модулей.
 
 ## Функциональность frontend
@@ -186,6 +186,7 @@ npm run preview    # локальный preview production-сборки
 ├── backend/
 │   ├── apps/
 │   │   ├── accounts/
+│   │   ├── incidents/
 │   │   └── health/
 │   ├── config/
 │   ├── .env.example

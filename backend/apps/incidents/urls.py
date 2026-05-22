@@ -1,0 +1,33 @@
+from django.urls import path
+
+from .views import (
+    AuditHistoryView,
+    DamageArchiveView,
+    DamageDetailView,
+    DamageListCreateView,
+    GisArchivedOrdersView,
+    GisDamagePointView,
+    GisOpenOrdersView,
+    OrderArchiveView,
+    OrderDetailView,
+    OrdersListView,
+    RootView,
+    UserUpdateView,
+    UsersListView,
+)
+
+urlpatterns = [
+    path('', RootView.as_view(), name='root'),
+    path('damages', DamageListCreateView.as_view(), name='damages-list-create'),
+    path('damages/<str:damage_id>', DamageDetailView.as_view(), name='damages-detail'),
+    path('damages/<str:damage_id>/archive', DamageArchiveView.as_view(), name='damages-archive'),
+    path('orders', OrdersListView.as_view(), name='orders-list'),
+    path('orders/<str:order_id>', OrderDetailView.as_view(), name='orders-detail'),
+    path('orders/<str:order_id>/archive', OrderArchiveView.as_view(), name='orders-archive'),
+    path('gis/orders/open', GisOpenOrdersView.as_view(), name='gis-open-orders'),
+    path('gis/orders/archive', GisArchivedOrdersView.as_view(), name='gis-archived-orders'),
+    path('gis/damages/<str:damage_id>/point', GisDamagePointView.as_view(), name='gis-damage-point'),
+    path('users', UsersListView.as_view(), name='users-list'),
+    path('users/<str:user_id>', UserUpdateView.as_view(), name='users-update'),
+    path('audit/<str:entity_type>/<str:entity_id>', AuditHistoryView.as_view(), name='audit-history'),
+]

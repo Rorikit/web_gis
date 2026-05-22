@@ -217,18 +217,17 @@ contractorType: Подрядчик | УРТС | Участок
 
 ### POST `/auth/logout`
 
-- Auth: требуется
+- Auth: cookie/session (можно вызывать без активной сессии)
 - Body: пустой
 - Success:
-  - `200` или `204`
+  - `204`
 
 ### GET `/auth/me`
 
-- Auth: cookie/session (обязателен)
+- Auth: cookie/session (если есть)
 - Success:
-  - `200` -> `User`
-- Errors:
-  - `403` (нет активной сессии)
+  - `200` -> `User` при активной сессии
+  - `200` -> `null` при отсутствии сессии
 
 ## 4.2 Damages
 
