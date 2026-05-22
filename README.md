@@ -117,6 +117,13 @@ cp backend/.env.example backend/.env
 docker compose -f docker-compose.backend.yml up --build
 ```
 
+При `DJANGO_BOOTSTRAP_DEV_AUTH=true` backend автоматически создаст тестовые районы и пользователей для входа.
+
+- `admin / admin` (роль `admin`)
+- `ivanov / ivanov` (роль `district_damage`)
+- `petrova / petrova` (роль `oopppr`)
+- `sidorov / sidorov` (роль `district_order`)
+
 ### 3. Проверка health endpoint
 
 ```bash
@@ -135,6 +142,14 @@ curl http://127.0.0.1:8000/health/
 ```
 
 Если БД недоступна, endpoint возвращает `503` и `database: error`.
+
+### 4. Проверка auth endpoint-ов
+
+```bash
+curl -X POST http://127.0.0.1:8000/auth/ldap/login \
+  -H 'Content-Type: application/json' \
+  -d '{\"ldapLogin\":\"admin\",\"password\":\"admin\"}'
+```
 
 ## Команды проекта
 
@@ -170,6 +185,7 @@ npm run preview    # локальный preview production-сборки
 .
 ├── backend/
 │   ├── apps/
+│   │   ├── accounts/
 │   │   └── health/
 │   ├── config/
 │   ├── .env.example

@@ -224,11 +224,11 @@ contractorType: Подрядчик | УРТС | Участок
 
 ### GET `/auth/me`
 
-- Auth: cookie/session
+- Auth: cookie/session (обязателен)
 - Success:
-  - `200` -> `User` или `null`
+  - `200` -> `User`
 - Errors:
-  - `401` (сессия истекла)
+  - `403` (нет активной сессии)
 
 ## 4.2 Damages
 
