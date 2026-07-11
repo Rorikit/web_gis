@@ -15,7 +15,7 @@ from apps.accounts.permissions import can_access_district, get_user_role, has_an
 from apps.accounts.serializers import serialize_user
 
 from .models import AuditEvent, Damage, GisPoint
-from .reports import build_damage_card_document
+from .reports import build_damage_card_document, build_reference_workbook
 from .serializers import DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
 from .services import apply_damage_changes, apply_order_changes, create_audit_event, default_damage_payload
 
@@ -503,4 +503,21 @@ class DamageCardReportView(APIView):
             content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         )
         response['Content-Disposition'] = f'attachment; filename="damage-card-{damage.id}.docx"'
+        return response
+
+
+class ReferenceReportView(APIView):
+    def post(self, request):
+        denied = require_permission(request, 'reports.createReference')
+        if denied:
+            return denied
+
+        report_date = str(request.data.get('reportDate') or timezone.localdate().isoformat())
+        content = build_reference_workbook(report_date)
+
+        response = HttpResponse(
+            content,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = f'attachment; filename="reference-{report_date}.xlsx"'
         return response

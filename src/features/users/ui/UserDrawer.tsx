@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import type { User, UserRole } from '@/entities';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
+import { roleLabel } from '@/features/permissions/model/permissions';
 import { useUpdateUser } from '@/features/users/hooks/useUsers';
 import { districts } from '@/shared/constants/districts';
 import { Button, Checkbox, Drawer, FormField, Input, Select } from '@/shared/ui';
@@ -41,7 +42,7 @@ export const UserDrawer = ({ user, open, onClose, users }: { user: User | null; 
           <FormField label="ФИО"><Input {...register('fullName')} /></FormField>
           <FormField label="Роль">
             <Select {...register('role')}>
-              {(['district_damage', 'district_order', 'oopppr', 'full_access', 'admin'] as UserRole[]).map((role) => <option key={role} value={role}>{role}</option>)}
+              {(['district_damage', 'district_order', 'oopppr', 'full_access', 'admin'] as UserRole[]).map((role) => <option key={role} value={role}>{roleLabel[role]}</option>)}
             </Select>
           </FormField>
           <FormField label="Район">
@@ -51,7 +52,7 @@ export const UserDrawer = ({ user, open, onClose, users }: { user: User | null; 
             </Select>
           </FormField>
           <FormField label="Активен"><Checkbox {...register('isActive')} /></FormField>
-          <Button disabled={update.isPending}>Сохранить</Button>
+          <Button type="submit" disabled={update.isPending}>Сохранить</Button>
         </form>
       )}
     </Drawer>

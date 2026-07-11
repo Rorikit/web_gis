@@ -1,21 +1,33 @@
 import { districts } from '@/shared/constants/districts';
 import { Button, DatePicker, FormField, Input, Select } from '@/shared/ui';
 
+export type OrderMapFilters = {
+  addressSearch: string;
+  district: string;
+  orderKind: string;
+  status: string;
+  periodFrom: string;
+  periodTo: string;
+  contractor: string;
+};
+
 export const GisSidebar = ({
   archiveMode,
   onArchiveMode,
-  district,
-  onDistrictChange,
+  filters,
+  onFiltersChange,
 }: {
   archiveMode: boolean;
   onArchiveMode: (value: boolean) => void;
-  district: string;
-  onDistrictChange: (value: string) => void;
+  filters: OrderMapFilters;
+  onFiltersChange: (patch: Partial<OrderMapFilters>) => void;
 }) => (
   <aside className="gis-sidebar">
-    <FormField label="Поиск адреса"><Input placeholder="Введите адрес" /></FormField>
+    <FormField label="Поиск адреса">
+      <Input placeholder="Введите адрес" value={filters.addressSearch} onChange={(event) => onFiltersChange({ addressSearch: event.target.value })} />
+    </FormField>
     <FormField label="Район">
-      <Select value={district} onChange={(event) => onDistrictChange(event.target.value)}>
+      <Select value={filters.district} onChange={(event) => onFiltersChange({ district: event.target.value })}>
         <option value="">Все районы</option>
         {districts.map((item) => (
           <option key={item.id} value={item.id}>{item.name}</option>
@@ -23,22 +35,28 @@ export const GisSidebar = ({
       </Select>
     </FormField>
     <FormField label="Тип ордера">
-      <Select>
-        <option>Все</option>
-        <option>Текущий</option>
-        <option>Гарантийный</option>
+      <Select value={filters.orderKind} onChange={(event) => onFiltersChange({ orderKind: event.target.value })}>
+        <option value="">Все</option>
+        <option value="Текущий">Текущий</option>
+        <option value="Гарантийный">Гарантийный</option>
       </Select>
     </FormField>
     <FormField label="Статус">
-      <Select>
-        <option>Все</option>
-        <option>В работе</option>
-        <option>Закрытый</option>
+      <Select value={filters.status} onChange={(event) => onFiltersChange({ status: event.target.value })}>
+        <option value="">Все</option>
+        <option value="open">В работе</option>
+        <option value="closed">Закрытый</option>
       </Select>
     </FormField>
-    <FormField label="Период с"><DatePicker /></FormField>
-    <FormField label="Период по"><DatePicker /></FormField>
-    <FormField label="Исполнитель"><Input placeholder="Исполнитель" /></FormField>
+    <FormField label="Период с">
+      <DatePicker value={filters.periodFrom} onChange={(event) => onFiltersChange({ periodFrom: event.target.value })} />
+    </FormField>
+    <FormField label="Период по">
+      <DatePicker value={filters.periodTo} onChange={(event) => onFiltersChange({ periodTo: event.target.value })} />
+    </FormField>
+    <FormField label="Исполнитель">
+      <Input placeholder="Исполнитель" value={filters.contractor} onChange={(event) => onFiltersChange({ contractor: event.target.value })} />
+    </FormField>
     <Button variant={archiveMode ? 'primary' : 'secondary'} onClick={() => onArchiveMode(!archiveMode)}>Архив ордеров</Button>
   </aside>
 );
