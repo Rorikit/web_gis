@@ -48,7 +48,7 @@ def build_damage_card_document(damage: Damage, additional_info: str = '') -> byt
     point = getattr(damage, 'gis_point', None)
     if point is not None:
         _add_row(table, 'GIS-координаты', f'{point.latitude}, {point.longitude}')
-        _add_row(table, 'GIS-адрес', point.address)
+        _add_row(table, 'GIS-адрес', damage.address)
     else:
         _add_row(table, 'GIS-точка', 'не указана')
 

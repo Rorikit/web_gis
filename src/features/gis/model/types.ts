@@ -6,7 +6,7 @@ export type GisLegendItem = {
 };
 
 export const orderLegendItems: GisLegendItem[] = [
-  { label: 'Текущий', color: '#dc2626' },
+  { label: 'Текущий', color: '#2563eb' },
   { label: 'Гарантийный', color: '#eab308' },
   { label: 'Закрытый', color: '#64748b' },
 ];

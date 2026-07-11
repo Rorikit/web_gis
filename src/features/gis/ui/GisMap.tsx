@@ -28,7 +28,7 @@ const markerStyle = (color: string) =>
 
 const colorByOrder = (order: Order) => {
   if (order.closedAt) return '#64748b';
-  return order.orderKind === 'Гарантийный' ? '#eab308' : '#dc2626';
+  return order.orderKind === 'Гарантийный' ? '#eab308' : '#2563eb';
 };
 
 const createBaseLayer = (layer: BaseMapLayer) =>

@@ -1,14 +1,24 @@
 import { districts } from '@/shared/constants/districts';
 import { Button, DatePicker, FormField, Input, Select } from '@/shared/ui';
 
-export const GisSidebar = ({ archiveMode, onArchiveMode }: { archiveMode: boolean; onArchiveMode: (value: boolean) => void }) => (
+export const GisSidebar = ({
+  archiveMode,
+  onArchiveMode,
+  district,
+  onDistrictChange,
+}: {
+  archiveMode: boolean;
+  onArchiveMode: (value: boolean) => void;
+  district: string;
+  onDistrictChange: (value: string) => void;
+}) => (
   <aside className="gis-sidebar">
     <FormField label="Поиск адреса"><Input placeholder="Введите адрес" /></FormField>
     <FormField label="Район">
-      <Select>
-        <option>Все районы</option>
-        {districts.map((district) => (
-          <option key={district.id}>{district.name}</option>
+      <Select value={district} onChange={(event) => onDistrictChange(event.target.value)}>
+        <option value="">Все районы</option>
+        {districts.map((item) => (
+          <option key={item.id} value={item.id}>{item.name}</option>
         ))}
       </Select>
     </FormField>

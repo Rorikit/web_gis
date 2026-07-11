@@ -60,12 +60,12 @@ class UserWriteSerializer(serializers.Serializer):
     isActive = serializers.BooleanField(required=False)
 
 
-def serialize_gis_point(point: GisPoint | None) -> dict[str, Any] | None:
+def serialize_gis_point(point: GisPoint | None, address: str = '') -> dict[str, Any] | None:
     if point is None:
         return None
     return {
         'id': point.id,
-        'address': point.address,
+        'address': address or point.address,
         'latitude': point.latitude,
         'longitude': point.longitude,
         'gisObjectId': point.gis_object_id,
@@ -113,7 +113,7 @@ def serialize_damage(item: Damage) -> dict[str, Any]:
         'plannedFinishDate': item.planned_finish_date,
         'note': item.note,
         'orderClosedAt': item.order_closed_at,
-        'gisPoint': serialize_gis_point(point),
+        'gisPoint': serialize_gis_point(point, item.address),
         'photos': [serialize_photo(photo) for photo in item.photos.all()],
         'createdAt': item.created_at,
         'updatedAt': item.updated_at,
@@ -138,7 +138,7 @@ def serialize_order(item: Damage) -> dict[str, Any]:
         'contractNumber': item.contract_number,
         'plannedFinishDate': item.planned_finish_date,
         'note': item.note,
-        'gisPoint': serialize_gis_point(point),
+        'gisPoint': serialize_gis_point(point, item.address),
         'archived': item.archived,
         'createdAt': item.created_at,
         'updatedAt': item.updated_at,
