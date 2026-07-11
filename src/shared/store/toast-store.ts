@@ -15,11 +15,13 @@ type ToastState = {
   remove: (id: string) => void;
 };
 
+let nextToastId = 0;
+
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
   push: (toast) =>
     set((state) => ({
-      toasts: [...state.toasts, { ...toast, id: crypto.randomUUID() }],
+      toasts: [...state.toasts, { ...toast, id: String(nextToastId++) }],
     })),
   remove: (id) => set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) })),
 }));
