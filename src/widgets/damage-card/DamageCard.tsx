@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import type { Damage } from '@/entities';
 import { AuditHistoryTable } from '@/features/audit-history/ui/AuditHistoryTable';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
-import { useUpdateDamage } from '@/features/damages/hooks/useDamages';
+import { useUpdateDamage, useUploadDamagePhoto } from '@/features/damages/hooks/useDamages';
 import { useSaveDamagePoint } from '@/features/gis/hooks/useGis';
 import { GisMiniPreview } from '@/features/gis/ui/GisMiniPreview';
 import { GisPointPicker } from '@/features/gis/ui/GisPointPicker';
@@ -34,9 +34,11 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const navigate = useNavigate();
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const { data: user } = useCurrentUser();
   const update = useUpdateDamage(damage.id);
   const savePoint = useSaveDamagePoint(damage.id);
+  const uploadPhoto = useUploadDamagePhoto(damage.id);
   const canEditMain = hasPermission(user?.role, 'damage.update');
   const { register, handleSubmit, reset, setValue } = useForm<DamageForm>({
     defaultValues: {
@@ -116,16 +118,39 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
         label: 'Фото',
         content: (
           <>
-            <Button variant="secondary">Загрузить фото</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!canEditMain || uploadPhoto.isPending}
+              onClick={() => photoInputRef.current?.click()}
+            >
+              {uploadPhoto.isPending ? 'Загрузка…' : 'Загрузить фото'}
+            </Button>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              style={{ display: 'none' }}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) uploadPhoto.mutate(file);
+                event.target.value = '';
+              }}
+            />
             <div className="photo-grid" style={{ marginTop: 12 }}>
-              {damage.photos.map((photo) => <div key={photo.id} className="photo-tile">{photo.fileName}</div>)}
+              {damage.photos.map((photo) => (
+                <a key={photo.id} className="photo-tile" href={photo.url} target="_blank" rel="noreferrer">
+                  <img src={photo.url} alt={photo.fileName} />
+                  <span>{photo.fileName}</span>
+                </a>
+              ))}
             </div>
           </>
         ),
       },
       { id: 'history', label: 'История', content: <AuditHistoryTable entityType="damage" entityId={damage.id} /> },
     ],
-    [damage, disabled, register],
+    [damage, disabled, register, canEditMain, uploadPhoto],
   );
 
   return (

@@ -76,7 +76,7 @@ def serialize_gis_point(point: GisPoint | None, address: str = '') -> dict[str, 
 def serialize_photo(photo: Photo) -> dict[str, Any]:
     return {
         'id': photo.id,
-        'url': photo.url,
+        'url': photo.file.url,
         'fileName': photo.file_name,
         'uploadedAt': photo.uploaded_at,
     }

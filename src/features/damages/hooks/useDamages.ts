@@ -48,3 +48,16 @@ export const useArchiveDamage = () => {
     },
   });
 };
+
+export const useUploadDamagePhoto = (id: string) => {
+  const queryClient = useQueryClient();
+  const push = useToastStore((state) => state.push);
+  return useMutation({
+    mutationFn: (file: File) => damagesApi.uploadPhoto(id, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.damage(id) });
+      push({ kind: 'success', title: 'Фото загружено' });
+    },
+    onError: () => push({ kind: 'error', title: 'Ошибка загрузки фото' }),
+  });
+};

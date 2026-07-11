@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
@@ -6,6 +7,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,10 +16,14 @@ from apps.accounts.models import District, UserRole
 from apps.accounts.permissions import can_access_district, get_user_role, has_any_permission, has_permission
 from apps.accounts.serializers import serialize_user
 
-from .models import AuditEvent, Damage, GisPoint
+from .models import AuditEvent, Damage, GisPoint, Photo
 from .reports import build_damage_card_document, build_reference_workbook
 from .serializers import DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
 from .services import apply_damage_changes, apply_order_changes, create_audit_event, default_damage_payload
+
+ALLOWED_PHOTO_CONTENT_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+ALLOWED_PHOTO_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+MAX_PHOTO_SIZE = 10 * 1024 * 1024
 
 User = get_user_model()
 
@@ -521,3 +527,40 @@ class ReferenceReportView(APIView):
         )
         response['Content-Disposition'] = f'attachment; filename="reference-{report_date}.xlsx"'
         return response
+
+
+class DamagePhotoUploadView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, damage_id: str):
+        denied = require_permission(request, 'damage.update')
+        if denied:
+            return denied
+
+        damage = get_damage_or_404(damage_id)
+        if not can_access_district(request.user, damage.district_id):
+            return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
+
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({'detail': 'Файл не передан'}, status=status.HTTP_400_BAD_REQUEST)
+
+        extension = Path(uploaded_file.name).suffix.lower()
+        if uploaded_file.content_type not in ALLOWED_PHOTO_CONTENT_TYPES or extension not in ALLOWED_PHOTO_EXTENSIONS:
+            return Response({'detail': 'Допустимы только изображения JPEG, PNG, GIF или WEBP'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if uploaded_file.size > MAX_PHOTO_SIZE:
+            return Response({'detail': 'Файл больше 10 МБ'}, status=status.HTTP_400_BAD_REQUEST)
+
+        photo = Photo.objects.create(damage=damage, file=uploaded_file, file_name=uploaded_file.name)
+        create_audit_event(
+            entity_type='damage',
+            entity_id=damage.id,
+            user=request.user,
+            field_name='photo',
+            old_value='',
+            new_value=photo.file_name,
+        )
+
+        damage = get_damage_or_404(damage.id)
+        return Response(serialize_damage(damage), status=status.HTTP_201_CREATED)

@@ -12,7 +12,7 @@ COPY . /app
 
 RUN groupadd --system django \
     && useradd --system --gid django --home-dir /app django \
-    && mkdir -p /app/staticfiles \
+    && mkdir -p /app/staticfiles /app/media \
     && chmod +x /app/entrypoint.sh \
     && chown -R django:django /app
 

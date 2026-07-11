@@ -8,6 +8,7 @@ export const endpoints = {
     list: '/damages',
     detail: (id: string) => `/damages/${id}`,
     archive: (id: string) => `/damages/${id}/archive`,
+    uploadPhoto: (id: string) => `/damages/${id}/photos`,
   },
   orders: {
     list: '/orders',

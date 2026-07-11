@@ -121,4 +121,6 @@ a { color: inherit; text-decoration: none; }
 .damage-gis-section .gis-mini { height: 360px; }
 .damage-gis-section__meta { display: grid; gap: 10px; align-content: start; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius); background: #f8fafc; }
 .photo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.photo-tile { height: 96px; border: 1px solid var(--color-border); border-radius: var(--radius); display: grid; place-items: center; background: #f8fafc; }
+.photo-tile { display: flex; flex-direction: column; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; background: #f8fafc; }
+.photo-tile img { width: 100%; height: 96px; object-fit: cover; display: block; }
+.photo-tile span { padding: 4px 6px; font-size: 12px; color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

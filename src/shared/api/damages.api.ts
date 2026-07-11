@@ -75,4 +75,11 @@ export const damagesApi = {
       return mockStore.archiveDamage(id);
     }
   },
+  async uploadPhoto(id: string, file: File): Promise<Damage> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await httpClient.post<unknown>(endpoints.damages.uploadPhoto(id), formData);
+    if (isRecord(data) && typeof data.id === 'string') return data as Damage;
+    throw new Error('Backend returned invalid payload for POST /damages/{id}/photos');
+  },
 };

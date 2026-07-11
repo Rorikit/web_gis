@@ -107,7 +107,7 @@ class GisPoint(models.Model):
 class Photo(models.Model):
     id = models.CharField(max_length=64, primary_key=True, default=generate_photo_id, editable=False)
     damage = models.ForeignKey(Damage, on_delete=models.CASCADE, related_name='photos')
-    url = models.URLField(max_length=1024)
+    file = models.FileField(upload_to='damage_photos/%Y/%m/')
     file_name = models.CharField(max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
