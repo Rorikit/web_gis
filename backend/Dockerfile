@@ -10,7 +10,13 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
 
-RUN chmod +x /app/entrypoint.sh
+RUN groupadd --system django \
+    && useradd --system --gid django --home-dir /app django \
+    && mkdir -p /app/staticfiles \
+    && chmod +x /app/entrypoint.sh \
+    && chown -R django:django /app
+
+USER django
 
 EXPOSE 8000
 

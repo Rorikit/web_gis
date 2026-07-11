@@ -21,7 +21,6 @@
     "react-hook-form": "^7.54.2",
     "react-router": "^7.1.5",
     "react-router-dom": "^7.1.5",
-    "xlsx": "^0.18.5",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"
   },

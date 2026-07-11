@@ -6,6 +6,7 @@ node_modules
 .npm-cache
 dist
 backend/.env
+.env.production
 backend/staticfiles
 __pycache__
 *.py[cod]
