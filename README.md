@@ -34,7 +34,7 @@
 - `@tanstack/react-query`, `@tanstack/react-table`
 - `OpenLayers` (`ol`)
 - `axios`, `react-hook-form`, `zod`, `zustand`
-- `xlsx`, `docx`
+- `docx`
 
 ### Backend
 
@@ -172,6 +172,27 @@ docker compose -f docker-compose.fullstack.yml up --build
 - backend API: `http://127.0.0.1:8000`
 
 Этот сценарий предназначен для dev-режима. Для production лучше разделять сервисы по контейнерам.
+
+## Production-деплой
+
+В репозитории подготовлен отдельный production-стек:
+
+- `docker-compose.prod.yml` — PostGIS, Django/Gunicorn и Nginx;
+- `Dockerfile.prod` — multi-stage production-сборка frontend;
+- `.env.production.example` — шаблон переменных окружения;
+- `DEPLOY.md` — полная инструкция по установке, HTTPS, backup и обновлениям.
+
+Минимальная последовательность после заполнения production-окружения:
+
+```bash
+cp .env.production.example .env.production
+chmod 600 .env.production
+docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+```
+
+Не запускайте production с placeholder-секретами из шаблона: backend завершит работу с
+ошибкой. Подробности и пример TLS reverse proxy приведены в `DEPLOY.md`.
 
 ## Команды проекта
 
