@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
@@ -14,6 +15,7 @@ from apps.accounts.permissions import can_access_district, get_user_role, has_an
 from apps.accounts.serializers import serialize_user
 
 from .models import AuditEvent, Damage, GisPoint
+from .reports import build_damage_card_document
 from .serializers import DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
 from .services import apply_damage_changes, apply_order_changes, create_audit_event, default_damage_payload
 
@@ -477,3 +479,28 @@ class RootView(APIView):
 
     def get(self, request):
         return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+
+
+class DamageCardReportView(APIView):
+    def post(self, request):
+        denied = require_permission(request, 'reports.createDamageCard')
+        if denied:
+            return denied
+
+        damage_id = request.data.get('damageId')
+        if not damage_id:
+            return Response({'detail': 'Не указан damageId'}, status=status.HTTP_400_BAD_REQUEST)
+
+        damage = get_damage_or_404(damage_id)
+        if not can_access_district(request.user, damage.district_id):
+            return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
+
+        additional_info = str(request.data.get('additionalInfo') or '')
+        content = build_damage_card_document(damage, additional_info)
+
+        response = HttpResponse(
+            content,
+            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        )
+        response['Content-Disposition'] = f'attachment; filename="damage-card-{damage.id}.docx"'
+        return response

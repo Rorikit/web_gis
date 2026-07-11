@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import type { Damage } from '@/entities';
 import { AuditHistoryTable } from '@/features/audit-history/ui/AuditHistoryTable';
@@ -13,10 +14,17 @@ import { DamageCardReportModal } from '@/features/reports/ui/DamageCardReportMod
 import { Button, Checkbox, FormField, Input, Select, Tabs, Textarea } from '@/shared/ui';
 
 const schema = z.object({
-  address: z.string().min(3),
-  heatSource: z.string().min(1),
-  damageDescription: z.string().min(1),
+  address: z.string(),
+  networkType: z.enum(['ОТ', 'ГВС']),
+  damageType: z.enum(['Текущее', 'Гидравлическое']),
+  heatSource: z.string(),
+  damageDescription: z.string(),
   note: z.string(),
+  greenZoneArea: z.number(),
+  asphaltArea: z.number(),
+  curbCount: z.number(),
+  improvementMain: z.boolean(),
+  improvementSidewalk: z.boolean(),
 });
 
 type DamageForm = z.infer<typeof schema>;
@@ -25,23 +33,31 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
   const [tab, setTab] = useState('main');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const navigate = useNavigate();
   const { data: user } = useCurrentUser();
   const update = useUpdateDamage(damage.id);
   const savePoint = useSaveDamagePoint(damage.id);
   const canEditMain = hasPermission(user?.role, 'damage.update');
-  const { register, handleSubmit, reset } = useForm<DamageForm>({
+  const { register, handleSubmit, reset, setValue } = useForm<DamageForm>({
     defaultValues: {
       address: damage.address,
+      networkType: damage.networkType,
+      damageType: damage.damageType,
       heatSource: damage.heatSource,
       damageDescription: damage.damageDescription,
       note: damage.note,
+      greenZoneArea: damage.greenZoneArea,
+      asphaltArea: damage.asphaltArea,
+      curbCount: damage.curbCount,
+      improvementMain: damage.improvementMain,
+      improvementSidewalk: damage.improvementSidewalk,
     },
   });
 
   const disabled = !canEditMain || update.isPending;
   const onSubmit = (values: DamageForm) => {
     const result = schema.safeParse(values);
-    if (result.success) update.mutate(result.data);
+    if (result.success) update.mutate(result.data, { onSuccess: () => navigate('/damages') });
   };
 
   const tabs = useMemo(
@@ -52,8 +68,18 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
         content: (
           <div className="form-grid">
             <FormField label="Адрес"><Input disabled={disabled} {...register('address')} /></FormField>
-            <FormField label="ОТ/ГВС"><Select disabled={disabled} defaultValue={damage.networkType}><option>ОТ</option><option>ГВС</option></Select></FormField>
-            <FormField label="Тип повреждения"><Select disabled={disabled} defaultValue={damage.damageType}><option>Текущее</option><option>Гидравлическое</option></Select></FormField>
+            <FormField label="ОТ/ГВС">
+              <Select disabled={disabled} {...register('networkType')}>
+                <option>ОТ</option>
+                <option>ГВС</option>
+              </Select>
+            </FormField>
+            <FormField label="Тип повреждения">
+              <Select disabled={disabled} {...register('damageType')}>
+                <option>Текущее</option>
+                <option>Гидравлическое</option>
+              </Select>
+            </FormField>
             <FormField label="Источник тепла"><Input disabled={disabled} {...register('heatSource')} /></FormField>
             <FormField label="Описание"><Textarea disabled={disabled} {...register('damageDescription')} /></FormField>
             <FormField label="Примечание"><Textarea disabled={disabled} {...register('note')} /></FormField>
@@ -77,11 +103,11 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
         label: 'Благоустройство',
         content: (
           <div className="form-grid">
-            <FormField label="Зеленая зона"><Input disabled={disabled} defaultValue={damage.greenZoneArea} /></FormField>
-            <FormField label="Асфальт"><Input disabled={disabled} defaultValue={damage.asphaltArea} /></FormField>
-            <FormField label="Бортовой камень"><Input disabled={disabled} defaultValue={damage.curbCount} /></FormField>
-            <FormField label="Проезжая часть"><Checkbox disabled={disabled} defaultChecked={damage.improvementMain} /></FormField>
-            <FormField label="Тротуар"><Checkbox disabled={disabled} defaultChecked={damage.improvementSidewalk} /></FormField>
+            <FormField label="Зеленая зона"><Input type="number" disabled={disabled} {...register('greenZoneArea', { valueAsNumber: true })} /></FormField>
+            <FormField label="Асфальт"><Input type="number" disabled={disabled} {...register('asphaltArea', { valueAsNumber: true })} /></FormField>
+            <FormField label="Бортовой камень"><Input type="number" disabled={disabled} {...register('curbCount', { valueAsNumber: true })} /></FormField>
+            <FormField label="Проезжая часть"><Checkbox disabled={disabled} {...register('improvementMain')} /></FormField>
+            <FormField label="Тротуар"><Checkbox disabled={disabled} {...register('improvementSidewalk')} /></FormField>
           </div>
         ),
       },
@@ -144,7 +170,14 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
         <Button type="button" variant="secondary" onClick={() => reset()}>Отмена</Button>
         <Button type="button" variant="secondary" onClick={() => setReportOpen(true)}>Карта повреждения DOCX</Button>
       </div>
-      <GisPointPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onSave={(point) => savePoint.mutate(point, { onSuccess: () => setPickerOpen(false) })} />
+      <GisPointPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSave={({ latitude, longitude, address }) => {
+          savePoint.mutate({ latitude, longitude }, { onSuccess: () => setPickerOpen(false) });
+          if (address) setValue('address', address);
+        }}
+      />
       <DamageCardReportModal damage={damage} open={reportOpen} onClose={() => setReportOpen(false)} />
     </form>
   );

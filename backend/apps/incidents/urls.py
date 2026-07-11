@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     AuditHistoryView,
     DamageArchiveView,
+    DamageCardReportView,
     DamageDetailView,
     DamageListCreateView,
     GisArchivedOrdersView,
@@ -32,4 +33,5 @@ urlpatterns = [
     path('users', UsersListView.as_view(), name='users-list'),
     path('users/<str:user_id>', UserUpdateView.as_view(), name='users-update'),
     path('audit/<str:entity_type>/<str:entity_id>', AuditHistoryView.as_view(), name='audit-history'),
+    path('reports/damage-card', DamageCardReportView.as_view(), name='reports-damage-card'),
 ]
