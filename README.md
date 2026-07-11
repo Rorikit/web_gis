@@ -222,6 +222,51 @@ npm run preview    # локальный preview production-сборки
 - чтобы изменения API не ломали существующие экраны;
 - чтобы у команды был один источник истины для разработки и ревью.
 
+## Sphinx-документация
+
+В проект подключён документационный стек для backend:
+
+- `sphinx`
+- `myst-parser`
+- `sphinx.ext.autodoc`
+- `sphinx.ext.autosummary`
+- `sphinx.ext.napoleon`
+- `sphinx-autodoc-typehints`
+- тема `furo`
+
+Исходники документации лежат в `docs/`, обзор архитектуры и API-справка (автоматически из
+docstring/сигнатур backend-кода) — на отдельных страницах.
+
+Установка зависимостей для сборки документации (поверх зависимостей backend):
+
+```bash
+pip install -r backend/requirements.txt -r docs/requirements.txt
+```
+
+Сборка HTML-документации:
+
+```bash
+make docs
+```
+
+Альтернативно:
+
+```bash
+python -m sphinx -b html docs docs/_build/html
+```
+
+Открытие локальной документации:
+
+```bash
+make docs-open
+```
+
+Очистка артефактов сборки:
+
+```bash
+make docs-clean
+```
+
 ## Структура проекта
 
 ```text
@@ -243,6 +288,13 @@ npm run preview    # локальный preview production-сборки
 │       └── pages.yml
 ├── API_CONTRACT.md
 ├── docker-compose.backend.yml
+├── docs/
+│   ├── conf.py
+│   ├── index.md
+│   ├── overview.md
+│   ├── api_reference.md
+│   └── requirements.txt
+├── Makefile
 ├── scripts/
 │   └── copy-spa-fallback.mjs
 ├── src/
