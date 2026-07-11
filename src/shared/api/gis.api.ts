@@ -67,4 +67,21 @@ export const gisApi = {
       return mockStore.saveDamagePoint(damageId, point);
     }
   },
+  async saveOrderPoint(orderId: string, point: Pick<GisPoint, 'latitude' | 'longitude'>): Promise<Order> {
+    if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude)) {
+      throw new Error('Некорректные координаты GIS-точки');
+    }
+    try {
+      const { data } = await httpClient.post<unknown>(endpoints.gis.createOrderPoint(orderId), point);
+      if (isRecord(data) && typeof data.id === 'string') return data as Order;
+      return fallbackOrThrow(
+        'gis',
+        'Backend returned invalid payload for POST /gis/orders/{id}/point',
+        () => mockStore.saveDamagePoint(orderId, point) as unknown as Order,
+      );
+    } catch (error) {
+      if (!shouldUseMockFallback(error, 'gis')) throw error;
+      return mockStore.saveDamagePoint(orderId, point) as unknown as Order;
+    }
+  },
 };

@@ -29,3 +29,18 @@ export const useSaveDamagePoint = (damageId: string) => {
     onError: (error) => push({ kind: 'error', title: 'Ошибка GIS API', message: getErrorMessage(error) }),
   });
 };
+
+export const useSaveOrderPoint = (orderId: string) => {
+  const queryClient = useQueryClient();
+  const push = useToastStore((state) => state.push);
+
+  return useMutation({
+    mutationFn: (point: Pick<GisPoint, 'latitude' | 'longitude'>) => gisApi.saveOrderPoint(orderId, point),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.order(orderId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.audit('order', orderId) });
+      push({ kind: 'success', title: 'GIS-точка сохранена' });
+    },
+    onError: (error) => push({ kind: 'error', title: 'Ошибка GIS API', message: getErrorMessage(error) }),
+  });
+};

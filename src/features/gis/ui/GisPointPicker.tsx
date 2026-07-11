@@ -10,6 +10,7 @@ import OSM from 'ol/source/OSM';
 import { toLonLat, fromLonLat } from 'ol/proj';
 import { Circle, Fill, Stroke, Style } from 'ol/style';
 import { ryazanMapCenter, toLonLatPair } from '@/shared/constants/map';
+import { reverseGeocode } from '@/shared/lib/reverse-geocode';
 import { Button, Modal } from '@/shared/ui';
 
 const pickedPointStyle = new Style({
@@ -27,14 +28,18 @@ export const GisPointPicker = ({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (point: { latitude: number; longitude: number }) => void;
+  onSave: (point: { latitude: number; longitude: number; address: string | null }) => void;
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const [point, setPoint] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  const geocodeAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!open || !ref.current) return;
     setPoint(null);
+    setAddress(null);
 
     const markerSource = new VectorSource();
     const markerFeature = new Feature();
@@ -50,16 +55,32 @@ export const GisPointPicker = ({
       const [longitude, latitude] = toLonLat(event.coordinate);
       markerFeature.setGeometry(new Point(event.coordinate));
       setPoint({ latitude, longitude });
+
+      geocodeAbortRef.current?.abort();
+      const controller = new AbortController();
+      geocodeAbortRef.current = controller;
+      setAddress(null);
+      setIsResolvingAddress(true);
+      reverseGeocode(latitude, longitude, controller.signal)
+        .then((result) => setAddress(result))
+        .finally(() => setIsResolvingAddress(false));
     });
-    return () => map.setTarget(undefined);
+    return () => {
+      geocodeAbortRef.current?.abort();
+      map.setTarget(undefined);
+    };
   }, [open]);
 
   return (
     <Modal open={open} title="Указать точку на карте" onClose={onClose}>
       <div className="gis-map" ref={ref} style={{ height: 560 }} />
-      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>{point ? `${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}` : 'Выберите точку кликом на карте'}</span>
-        <Button disabled={!point} onClick={() => point && onSave(point)}>Сохранить точку</Button>
+      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <span>
+          {point ? `${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}` : 'Выберите точку кликом на карте'}
+          {isResolvingAddress && ' · определение адреса…'}
+          {!isResolvingAddress && address && ` · ${address}`}
+        </span>
+        <Button disabled={!point} onClick={() => point && onSave({ ...point, address })}>Сохранить точку</Button>
       </div>
     </Modal>
   );

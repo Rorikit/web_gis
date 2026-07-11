@@ -1,7 +1,30 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
 import type { Order } from '@/entities';
+import { useCurrentUser } from '@/features/auth/hooks/useAuth';
+import { useArchiveOrder } from '@/features/orders/hooks/useOrders';
+import { hasPermission } from '@/features/permissions/model/permissions';
 import { Badge, Button, DataTable } from '@/shared/ui';
+
+const OrderRowActions = ({ order }: { order: Order }) => {
+  const { data: user } = useCurrentUser();
+  const archive = useArchiveOrder();
+  const canClose = hasPermission(user?.role, 'order.update');
+  const isClosed = Boolean(order.closedAt);
+
+  return (
+    <div style={{ display: 'flex', gap: 8 }}>
+      <Button variant="secondary"><Link to={`/orders/${order.id}`}>Открыть</Link></Button>
+      <Button
+        variant="secondary"
+        disabled={!canClose || isClosed || archive.isPending}
+        onClick={() => archive.mutate(order.id)}
+      >
+        {isClosed ? 'Закрыт' : 'Закрыть'}
+      </Button>
+    </div>
+  );
+};
 
 const columns: ColumnDef<Order>[] = [
   { header: '№', accessorKey: 'id' },
@@ -14,7 +37,7 @@ const columns: ColumnDef<Order>[] = [
   { header: 'Состояние', accessorKey: 'areaState' },
   { header: 'Исполнитель', accessorKey: 'contractorName' },
   { header: 'GIS', cell: ({ row }) => (row.original.gisPoint ? <Badge tone="success">● Есть точка</Badge> : <Badge>○ Нет точки</Badge>) },
-  { header: 'Редактировать', cell: ({ row }) => <Button variant="secondary"><Link to={`/orders/${row.original.id}`}>Открыть</Link></Button> },
+  { header: 'Редактировать', cell: ({ row }) => <OrderRowActions order={row.original} /> },
 ];
 
 export const OrdersTable = ({ data, isLoading, isError }: { data: Order[]; isLoading?: boolean; isError?: boolean }) => (

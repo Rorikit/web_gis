@@ -19,6 +19,8 @@ export const endpoints = {
     archivedOrders: '/gis/orders/archive',
     createDamagePoint: (id: string) => `/gis/damages/${id}/point`,
     updateDamagePoint: (id: string) => `/gis/damages/${id}/point`,
+    createOrderPoint: (id: string) => `/gis/orders/${id}/point`,
+    updateOrderPoint: (id: string) => `/gis/orders/${id}/point`,
   },
   reports: {
     reference: '/reports/reference',

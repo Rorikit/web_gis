@@ -316,60 +316,69 @@ class GisArchivedOrdersView(APIView):
         return Response([serialize_order(item) for item in queryset], status=status.HTTP_200_OK)
 
 
+def save_gis_point(request, entity_id: str, permission_name: str, entity_type: str, serialize_fn):
+    denied = require_permission(request, permission_name)
+    if denied:
+        return denied
+
+    damage = get_damage_or_404(entity_id)
+    if not can_access_district(request.user, damage.district_id):
+        return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
+
+    serializer = GisPointWriteSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    point = getattr(damage, 'gis_point', None)
+    if point is None:
+        point = GisPoint.objects.create(
+            damage=damage,
+            address=damage.address,
+            latitude=serializer.validated_data['latitude'],
+            longitude=serializer.validated_data['longitude'],
+            gis_object_id=f'GIS-{timezone.now().strftime("%Y%m%d%H%M%S")}',
+            map_url='https://maps.example.local',
+        )
+        create_audit_event(
+            entity_type=entity_type,
+            entity_id=damage.id,
+            user=request.user,
+            field_name='gis_point',
+            old_value='',
+            new_value=f'{point.latitude},{point.longitude}',
+        )
+    else:
+        old_value = f'{point.latitude},{point.longitude}'
+        point.latitude = serializer.validated_data['latitude']
+        point.longitude = serializer.validated_data['longitude']
+        point.address = damage.address
+        point.save(update_fields=['latitude', 'longitude', 'address', 'updated_at'])
+        create_audit_event(
+            entity_type=entity_type,
+            entity_id=damage.id,
+            user=request.user,
+            field_name='gis_point',
+            old_value=old_value,
+            new_value=f'{point.latitude},{point.longitude}',
+        )
+
+    damage = get_damage_or_404(damage.id)
+    return Response(serialize_fn(damage), status=status.HTTP_200_OK)
+
+
 class GisDamagePointView(APIView):
     def post(self, request, damage_id: str):
-        return self._save_point(request, damage_id)
+        return save_gis_point(request, damage_id, 'damage.update', 'damage', serialize_damage)
 
     def put(self, request, damage_id: str):
-        return self._save_point(request, damage_id)
+        return save_gis_point(request, damage_id, 'damage.update', 'damage', serialize_damage)
 
-    def _save_point(self, request, damage_id: str):
-        denied = require_permission(request, 'damage.update')
-        if denied:
-            return denied
 
-        damage = get_damage_or_404(damage_id)
-        if not can_access_district(request.user, damage.district_id):
-            return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
+class GisOrderPointView(APIView):
+    def post(self, request, order_id: str):
+        return save_gis_point(request, order_id, 'order.update', 'order', serialize_order)
 
-        serializer = GisPointWriteSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        point = getattr(damage, 'gis_point', None)
-        if point is None:
-            point = GisPoint.objects.create(
-                damage=damage,
-                address=damage.address,
-                latitude=serializer.validated_data['latitude'],
-                longitude=serializer.validated_data['longitude'],
-                gis_object_id=f'GIS-{timezone.now().strftime("%Y%m%d%H%M%S")}',
-                map_url='https://maps.example.local',
-            )
-            create_audit_event(
-                entity_type='damage',
-                entity_id=damage.id,
-                user=request.user,
-                field_name='gis_point',
-                old_value='',
-                new_value=f'{point.latitude},{point.longitude}',
-            )
-        else:
-            old_value = f'{point.latitude},{point.longitude}'
-            point.latitude = serializer.validated_data['latitude']
-            point.longitude = serializer.validated_data['longitude']
-            point.address = damage.address
-            point.save(update_fields=['latitude', 'longitude', 'address', 'updated_at'])
-            create_audit_event(
-                entity_type='damage',
-                entity_id=damage.id,
-                user=request.user,
-                field_name='gis_point',
-                old_value=old_value,
-                new_value=f'{point.latitude},{point.longitude}',
-            )
-
-        damage = get_damage_or_404(damage.id)
-        return Response(serialize_damage(damage), status=status.HTTP_200_OK)
+    def put(self, request, order_id: str):
+        return save_gis_point(request, order_id, 'order.update', 'order', serialize_order)
 
 
 class UsersListView(APIView):
