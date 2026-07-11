@@ -8,8 +8,17 @@ import VectorLayer from 'ol/layer/Vector';
 import { fromLonLat } from 'ol/proj';
 import OSM from 'ol/source/OSM';
 import VectorSource from 'ol/source/Vector';
+import { Circle, Fill, Stroke, Style } from 'ol/style';
 import type { GisPoint } from '@/entities';
 import { ryazanMapCenter, toLonLatPair } from '@/shared/constants/map';
+
+const savedPointStyle = new Style({
+  image: new Circle({
+    radius: 8,
+    fill: new Fill({ color: '#2563eb' }),
+    stroke: new Stroke({ color: '#ffffff', width: 2 }),
+  }),
+});
 
 export const GisMiniPreview = ({ point }: { point: GisPoint | null }) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -19,6 +28,7 @@ export const GisMiniPreview = ({ point }: { point: GisPoint | null }) => {
 
     const center = point ? fromLonLat([point.longitude, point.latitude]) : fromLonLat(toLonLatPair());
     const features = point ? [new Feature(new Point(center))] : [];
+    features.forEach((feature) => feature.setStyle(savedPointStyle));
     const source = new VectorSource({ features });
     const map = new Map({
       target: ref.current,

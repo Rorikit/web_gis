@@ -1,3 +1,4 @@
+import { districts } from '@/shared/constants/districts';
 import { Button, DatePicker, FormField, Input, Select } from '@/shared/ui';
 
 export const GisSidebar = ({ archiveMode, onArchiveMode }: { archiveMode: boolean; onArchiveMode: (value: boolean) => void }) => (
@@ -6,8 +7,9 @@ export const GisSidebar = ({ archiveMode, onArchiveMode }: { archiveMode: boolea
     <FormField label="Район">
       <Select>
         <option>Все районы</option>
-        <option>Центральный район</option>
-        <option>Северный район</option>
+        {districts.map((district) => (
+          <option key={district.id}>{district.name}</option>
+        ))}
       </Select>
     </FormField>
     <FormField label="Тип ордера">
