@@ -13,17 +13,17 @@ class GisPointWriteSerializer(serializers.Serializer):
 
 class DamageWriteSerializer(serializers.Serializer):
     districtId = serializers.CharField(required=False)
-    address = serializers.CharField(required=False)
+    address = serializers.CharField(required=False, allow_blank=True)
     networkType = serializers.ChoiceField(choices=NetworkType.choices, required=False)
     detectedAt = serializers.DateField(required=False)
     fixedAt = serializers.DateField(required=False, allow_null=True)
     orderNumber = serializers.CharField(required=False)
     orderOpenedAt = serializers.DateField(required=False)
     orderValidUntil = serializers.DateField(required=False)
-    heatSource = serializers.CharField(required=False)
+    heatSource = serializers.CharField(required=False, allow_blank=True)
     damageType = serializers.ChoiceField(choices=DamageType.choices, required=False)
     disconnectedConsumers = serializers.IntegerField(required=False)
-    damageDescription = serializers.CharField(required=False)
+    damageDescription = serializers.CharField(required=False, allow_blank=True)
     orderKind = serializers.ChoiceField(choices=OrderKind.choices, required=False)
     greenZoneArea = serializers.IntegerField(required=False)
     asphaltArea = serializers.IntegerField(required=False)
@@ -43,7 +43,7 @@ class DamageWriteSerializer(serializers.Serializer):
 
 
 class OrderWriteSerializer(serializers.Serializer):
-    address = serializers.CharField(required=False)
+    address = serializers.CharField(required=False, allow_blank=True)
     orderKind = serializers.ChoiceField(choices=OrderKind.choices, required=False)
     areaState = serializers.ChoiceField(choices=AreaState.choices, required=False)
     contractorName = serializers.CharField(required=False, allow_blank=True)
