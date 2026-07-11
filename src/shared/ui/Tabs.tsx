@@ -10,7 +10,7 @@ export const Tabs = ({ items, activeId, onChange }: { items: TabItem[]; activeId
   <div className="tabs">
     <div className="tabs__list">
       {items.map((item) => (
-        <button key={item.id} className={activeId === item.id ? 'tabs__tab tabs__tab--active' : 'tabs__tab'} onClick={() => onChange(item.id)}>
+        <button key={item.id} type="button" className={activeId === item.id ? 'tabs__tab tabs__tab--active' : 'tabs__tab'} onClick={() => onChange(item.id)}>
           {item.label}
         </button>
       ))}
