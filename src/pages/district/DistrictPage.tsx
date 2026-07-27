@@ -1,33 +1,29 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDamages } from '@/features/damages/hooks/useDamages';
-import { ReferenceReportModal } from '@/features/reports/ui/ReferenceReportModal';
+import { useDistrictFilter } from '@/features/permissions/hooks/useDistrictFilter';
 import { GeneralTable } from '@/widgets/general-table/GeneralTable';
 import { ExportTableButton } from '@/widgets/table-toolbar/ExportTableButton';
 import { Button, PageHeader, PageToolbar } from '@/shared/ui';
 
-export const FullAccessPage = () => {
-  const [reportOpen, setReportOpen] = useState(false);
+export const DistrictPage = () => {
   const query = useDamages(false);
+  const data = useDistrictFilter(query.data);
 
   return (
     <>
       <PageHeader
-        title="Полный доступ"
-        subtitle="Все районы, все повреждения и ордера"
+        title="Район"
         actions={(
           <>
             <Button variant="secondary"><Link to="/damages">Повреждения</Link></Button>
             <Button variant="secondary"><Link to="/orders">Ордера</Link></Button>
-            <Button onClick={() => setReportOpen(true)}>Справка XLSX</Button>
           </>
         )}
       />
       <PageToolbar>
-        <ExportTableButton entityType="damages" fileName="Полный-доступ.xlsx" />
+        <ExportTableButton entityType="damages" fileName="Район.xlsx" />
       </PageToolbar>
-      <GeneralTable data={query.data ?? []} isLoading={query.isLoading} isError={query.isError} />
-      <ReferenceReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
+      <GeneralTable data={data} isLoading={query.isLoading} isError={query.isError} />
     </>
   );
 };

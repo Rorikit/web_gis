@@ -71,6 +71,46 @@ def _write_header(sheet: Worksheet, columns: list[str]) -> None:
         cell.font = cell.font.copy(bold=True)
 
 
+def build_current_table_workbook(items, entity_type: str) -> bytes:
+    workbook = Workbook()
+    sheet = workbook.active
+
+    if entity_type == 'orders':
+        sheet.title = 'Ордера'
+        _write_header(sheet, ['№', 'Район', '№ ордера', 'Адрес', 'Вид', 'Открыт', 'Действует до', 'Закрыт', 'Состояние', 'Исполнитель'])
+        for item in items:
+            sheet.append([
+                item.id,
+                item.district.name if item.district_id else '-',
+                item.order_number,
+                item.address,
+                item.order_kind,
+                str(item.order_opened_at) if item.order_opened_at else '',
+                str(item.order_valid_until) if item.order_valid_until else '',
+                str(item.order_closed_at) if item.order_closed_at else '',
+                item.area_state,
+                item.contractor_name or item.contractor_type,
+            ])
+    else:
+        sheet.title = 'Повреждения'
+        _write_header(sheet, ['№', 'Район', 'Адрес', 'ОТ/ГВС', 'Тип повреждения', 'Обнаружено', 'Устранено', '№ ордера'])
+        for item in items:
+            sheet.append([
+                item.id,
+                item.district.name if item.district_id else '-',
+                item.address,
+                item.network_type,
+                item.damage_type,
+                str(item.detected_at) if item.detected_at else '',
+                str(item.fixed_at) if item.fixed_at else '',
+                item.order_number,
+            ])
+
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
+
+
 def build_reference_workbook(report_date: str) -> bytes:
     workbook = Workbook()
 

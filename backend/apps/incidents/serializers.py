@@ -60,6 +60,15 @@ class UserWriteSerializer(serializers.Serializer):
     isActive = serializers.BooleanField(required=False)
 
 
+class UserCreateSerializer(serializers.Serializer):
+    ldapLogin = serializers.CharField(max_length=150)
+    password = serializers.CharField(max_length=128)
+    fullName = serializers.CharField(required=False, allow_blank=True, max_length=255, default='')
+    role = serializers.ChoiceField(choices=UserRole.choices)
+    districtId = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    isActive = serializers.BooleanField(required=False, default=True)
+
+
 def serialize_gis_point(point: GisPoint | None, address: str = '') -> dict[str, Any] | None:
     if point is None:
         return None

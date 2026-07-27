@@ -47,3 +47,11 @@ export const roleLabel: Record<UserRole, string> = {
   full_access: 'Полный доступ',
   admin: 'Администратор',
 };
+
+export const landingPathByRole: Record<UserRole, string> = {
+  district_damage: '/district',
+  district_order: '/district',
+  oopppr: '/oopppr',
+  full_access: '/full-access',
+  admin: '/admin',
+};

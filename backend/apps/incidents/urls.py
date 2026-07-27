@@ -7,6 +7,7 @@ from .views import (
     DamageDetailView,
     DamageListCreateView,
     DamagePhotoUploadView,
+    ExportCurrentTableView,
     GisArchivedOrdersView,
     GisDamagePointView,
     GisOpenOrdersView,
@@ -38,4 +39,5 @@ urlpatterns = [
     path('audit/<str:entity_type>/<str:entity_id>', AuditHistoryView.as_view(), name='audit-history'),
     path('reports/damage-card', DamageCardReportView.as_view(), name='reports-damage-card'),
     path('reports/reference', ReferenceReportView.as_view(), name='reports-reference'),
+    path('exports/current-table', ExportCurrentTableView.as_view(), name='exports-current-table'),
 ]

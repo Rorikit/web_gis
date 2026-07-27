@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { landingPathByRole } from '@/features/permissions/model/permissions';
 import { authApi, type LoginPayload } from '@/shared/api/auth.api';
 import { queryKeys } from '@/shared/types/query';
 import { useToastStore } from '@/shared/store/toast-store';
@@ -20,7 +21,7 @@ export const useLogin = () => {
     onSuccess: (user) => {
       queryClient.setQueryData(queryKeys.currentUser, user);
       push({ kind: 'success', title: 'Вход выполнен' });
-      navigate('/dashboard');
+      navigate(landingPathByRole[user.role]);
     },
     onError: () => push({ kind: 'error', title: 'Ошибка LDAP', message: 'Проверьте логин и пароль' }),
   });

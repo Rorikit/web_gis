@@ -3,8 +3,13 @@ import { httpClient } from './http-client';
 import { textBlob } from '@/shared/lib/download';
 import { shouldUseMockFallback } from './mock-fallback';
 
+export type ExportCurrentTablePayload = {
+  entityType: 'damages' | 'orders';
+  archived?: boolean;
+};
+
 export const exportsApi = {
-  async currentTable(payload: Record<string, unknown>): Promise<Blob> {
+  async currentTable(payload: ExportCurrentTablePayload): Promise<Blob> {
     try {
       const { data } = await httpClient.post(endpoints.exports.currentTable, payload, { responseType: 'blob' });
       return data;

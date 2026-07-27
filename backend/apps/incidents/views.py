@@ -2,6 +2,8 @@ from datetime import datetime
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import QuerySet
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -17,8 +19,8 @@ from apps.accounts.permissions import can_access_district, get_user_role, has_an
 from apps.accounts.serializers import serialize_user
 
 from .models import AuditEvent, Damage, GisPoint, Photo
-from .reports import build_damage_card_document, build_reference_workbook
-from .serializers import DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
+from .reports import build_current_table_workbook, build_damage_card_document, build_reference_workbook
+from .serializers import DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserCreateSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
 from .services import apply_damage_changes, apply_order_changes, create_audit_event, default_damage_payload
 
 ALLOWED_PHOTO_CONTENT_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
@@ -28,9 +30,11 @@ MAX_PHOTO_SIZE = 10 * 1024 * 1024
 User = get_user_model()
 
 
-def parse_bool(value: str | None, default: bool = False) -> bool:
+def parse_bool(value: str | bool | None, default: bool = False) -> bool:
     if value is None:
         return default
+    if isinstance(value, bool):
+        return value
     return value.lower() in {'1', 'true', 'yes', 'y', 'on'}
 
 
@@ -398,6 +402,58 @@ class UsersListView(APIView):
         users = User.objects.select_related('profile', 'profile__district').order_by('id')
         return Response([serialize_user(user) for user in users], status=status.HTTP_200_OK)
 
+    def post(self, request):
+        denied = require_permission(request, 'users.create')
+        if denied:
+            return denied
+
+        serializer = UserCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        payload = serializer.validated_data
+
+        ldap_login = payload['ldapLogin'].strip()
+        if not ldap_login:
+            return Response({'detail': 'Не указан логин'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(username=ldap_login).exists():
+            return Response({'detail': 'Пользователь с таким логином уже существует'}, status=status.HTTP_409_CONFLICT)
+
+        try:
+            validate_password(payload['password'])
+        except DjangoValidationError as error:
+            return Response({'detail': ' '.join(error.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        district = None
+        district_id = payload.get('districtId') or None
+        if district_id:
+            district = District.objects.filter(id=district_id).first()
+            if district is None:
+                return Response({'detail': 'Район не найден'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.create_user(
+            username=ldap_login,
+            password=payload['password'],
+            is_active=payload.get('isActive', True),
+        )
+
+        profile = user.profile
+        profile.full_name = payload.get('fullName', '')
+        profile.role = payload['role']
+        profile.district = district
+        profile.save(update_fields=['full_name', 'role', 'district'])
+
+        create_audit_event(
+            entity_type='user',
+            entity_id=str(user.id),
+            user=request.user,
+            field_name='__created__',
+            old_value='',
+            new_value=user.username,
+        )
+
+        user = User.objects.select_related('profile', 'profile__district').get(pk=user.pk)
+        return Response(serialize_user(user), status=status.HTTP_201_CREATED)
+
 
 class UserUpdateView(APIView):
     def put(self, request, user_id: str):
@@ -526,6 +582,28 @@ class ReferenceReportView(APIView):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
         response['Content-Disposition'] = f'attachment; filename="reference-{report_date}.xlsx"'
+        return response
+
+
+class ExportCurrentTableView(APIView):
+    def post(self, request):
+        entity_type = request.data.get('entityType') or 'damages'
+        archived = parse_bool(request.data.get('archived'), default=False)
+
+        permission_name = 'order.read' if entity_type == 'orders' else 'damage.read'
+        denied = require_permission(request, permission_name)
+        if denied:
+            return denied
+
+        queryset = base_damage_queryset().filter(archived=archived)
+        queryset = filter_by_district_access(queryset, request.user)
+
+        content = build_current_table_workbook(queryset, entity_type)
+        response = HttpResponse(
+            content,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = 'attachment; filename="export.xlsx"'
         return response
 
 

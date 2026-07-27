@@ -4,6 +4,7 @@ import { env } from '@/shared/config/env';
 export const httpClient = axios.create({
   baseURL: env.apiUrl,
   withCredentials: true,
+  withXSRFToken: true,
   xsrfCookieName: 'csrftoken',
   xsrfHeaderName: 'X-CSRFToken',
   headers: {

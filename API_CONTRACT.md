@@ -392,6 +392,23 @@ contractorType: Подрядчик | УРТС | Участок
 - Success:
   - `200` -> `User[]`
 
+### POST `/users`
+
+- Auth: требуется (`users.create`)
+- Body:
+  - `ldapLogin` (обязательно, уникальный логин)
+  - `password` (обязательно, проверяется стандартными валидаторами Django)
+  - `fullName`
+  - `role` (обязательно)
+  - `districtId` (может быть `null`/пустым для “все районы”)
+  - `isActive` (по умолчанию `true`)
+- Success:
+  - `201` -> `User`
+- Errors:
+  - `400` (невалидный пароль/район)
+  - `403`
+  - `409` (логин уже занят)
+
 ### PUT `/users/{id}`
 
 - Auth: требуется (`users.update`)
@@ -453,8 +470,11 @@ contractorType: Подрядчик | УРТС | Участок
 
 ### POST `/exports/current-table`
 
-- Auth: требуется
-- Body: `Record<string, unknown>` (структура зависит от типа выгрузки, будет уточнена отдельно)
+- Auth: требуется (`damage.read` для `entityType: "damages"`, `order.read` для `entityType: "orders"`)
+- Body:
+  - `entityType`: `"damages" | "orders"` (по умолчанию `"damages"`)
+  - `archived`: `boolean` (по умолчанию `false`)
+- Район-скоуп применяется так же, как в `GET /damages` / `GET /orders`.
 - Success:
   - `200` -> файл (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
 

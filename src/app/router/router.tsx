@@ -1,15 +1,18 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import { AuthGuard } from '@/app/guards/AuthGuard';
+import { IndexRedirect } from '@/app/guards/IndexRedirect';
 import { RoleGuard } from '@/app/guards/RoleGuard';
 import { AuthLayout } from '@/app/layouts/AuthLayout';
 import { MainLayout } from '@/app/layouts/MainLayout';
 import { AccessDeniedPage } from '@/pages/access-denied/AccessDeniedPage';
+import { AdminArchivePage } from '@/pages/admin/AdminArchivePage';
 import { AdminPage } from '@/pages/admin/AdminPage';
 import { AuthPage } from '@/pages/auth/AuthPage';
 import { DamageArchivePage } from '@/pages/damage-archive/DamageArchivePage';
 import { DamageDetailsPage } from '@/pages/damages/DamageDetailsPage';
 import { DamagesPage } from '@/pages/damages/DamagesPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { DistrictPage } from '@/pages/district/DistrictPage';
 import { FullAccessPage } from '@/pages/full-access/FullAccessPage';
 import { OrderMapPage } from '@/pages/map/OrderMapPage';
 import { OoppprArchivePage } from '@/pages/oopppr/OoppprArchivePage';
@@ -31,11 +34,12 @@ export const router = createBrowserRouter(
         {
           element: <MainLayout />,
           children: [
-            { index: true, element: <Navigate to="/dashboard" replace /> },
+            { index: true, element: <IndexRedirect /> },
             { path: '/dashboard', element: <DashboardPage /> },
             {
               element: <RoleGuard permission="damage.read" />,
               children: [
+                { path: '/district', element: <DistrictPage /> },
                 { path: '/damages', element: <DamagesPage /> },
                 { path: '/damages/archive', element: <DamageArchivePage /> },
                 { path: '/damages/:id', element: <DamageDetailsPage /> },
@@ -62,6 +66,7 @@ export const router = createBrowserRouter(
               element: <RoleGuard permission="users.read" />,
               children: [
                 { path: '/admin', element: <AdminPage /> },
+                { path: '/admin/archive', element: <AdminArchivePage /> },
                 { path: '/admin/users', element: <UsersPage /> },
               ],
             },

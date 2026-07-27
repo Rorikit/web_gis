@@ -83,6 +83,23 @@ export const mockStore = {
     await wait();
     return users;
   },
+  async createUser(payload: { ldapLogin: string; fullName: string; role: User['role']; districtId: string | null; isActive: boolean }) {
+    await wait();
+    if (users.some((item) => item.ldapLogin === payload.ldapLogin)) {
+      throw new Error('Пользователь с таким логином уже существует');
+    }
+    const user: User = {
+      id: crypto.randomUUID(),
+      ldapLogin: payload.ldapLogin,
+      fullName: payload.fullName,
+      role: payload.role,
+      districtId: payload.districtId,
+      isActive: payload.isActive,
+      lastLoginAt: null,
+    };
+    users = [...users, user];
+    return user;
+  },
   async updateUser(id: string, payload: Partial<User>) {
     await wait();
     users = users.map((item) => (item.id === id ? { ...item, ...payload } : item));

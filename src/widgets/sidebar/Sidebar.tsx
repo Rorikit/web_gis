@@ -4,7 +4,7 @@ import type { UserRole } from '@/entities/user/types';
 
 const itemsByRole: Record<UserRole, Array<{ label: string; to: string }>> = {
   district_damage: [
-    { label: 'Главная', to: '/dashboard' },
+    { label: 'Район', to: '/district' },
     { label: 'Повреждения', to: '/damages' },
     { label: 'Ордера', to: '/orders' },
     { label: 'Карта ордеров', to: '/map/orders' },
@@ -12,7 +12,7 @@ const itemsByRole: Record<UserRole, Array<{ label: string; to: string }>> = {
     { label: 'Архив ордеров', to: '/orders/archive' },
   ],
   district_order: [
-    { label: 'Главная', to: '/dashboard' },
+    { label: 'Район', to: '/district' },
     { label: 'Повреждения', to: '/damages' },
     { label: 'Ордера', to: '/orders' },
     { label: 'Карта ордеров', to: '/map/orders' },
@@ -26,21 +26,21 @@ const itemsByRole: Record<UserRole, Array<{ label: string; to: string }>> = {
     { label: 'Карта ордеров', to: '/map/orders' },
   ],
   full_access: [
-    { label: 'Главная', to: '/dashboard' },
+    { label: 'Полный доступ', to: '/full-access' },
     { label: 'Повреждения', to: '/damages' },
     { label: 'Ордера', to: '/orders' },
     { label: 'Карта ордеров', to: '/map/orders' },
-    { label: 'Справка', to: '/full-access' },
-    { label: 'Архивы', to: '/damages/archive' },
+    { label: 'Архив повреждений', to: '/damages/archive' },
+    { label: 'Архив ордеров', to: '/orders/archive' },
   ],
   admin: [
-    { label: 'Главная', to: '/dashboard' },
+    { label: 'Администратор', to: '/admin' },
     { label: 'Повреждения', to: '/damages' },
     { label: 'Ордера', to: '/orders' },
-    { label: 'Карта', to: '/map/orders' },
-    { label: 'Архивы', to: '/damages/archive' },
+    { label: 'Карта ордеров', to: '/map/orders' },
+    { label: 'Архив администратора', to: '/admin/archive' },
     { label: 'Пользователи', to: '/admin/users' },
-    { label: 'Справка', to: '/full-access' },
+    { label: 'Полный доступ', to: '/full-access' },
   ],
 };
 

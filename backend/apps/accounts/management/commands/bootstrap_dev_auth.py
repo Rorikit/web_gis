@@ -11,16 +11,18 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         districts = [
-            ('central', 'Центральный район'),
-            ('north', 'Северный район'),
-            ('south', 'Южный район'),
+            ('sovetsky', 'Советский район'),
+            ('moskovsky', 'Московский район'),
+            ('oktyabrsky', 'Октябрьский район'),
+            ('zheleznodorozhny', 'Железнодорожный район'),
+            ('solotcha', 'Солотча'),
         ]
 
         for district_id, district_name in districts:
             District.objects.update_or_create(id=district_id, defaults={'name': district_name})
 
-        central = District.objects.get(id='central')
-        north = District.objects.get(id='north')
+        sovetsky = District.objects.get(id='sovetsky')
+        moskovsky = District.objects.get(id='moskovsky')
 
         self._upsert_user(
             username='admin',
@@ -38,7 +40,7 @@ class Command(BaseCommand):
             is_staff=False,
             full_name='Иванов Сергей Петрович',
             role=UserRole.DISTRICT_DAMAGE,
-            district=central,
+            district=sovetsky,
         )
         self._upsert_user(
             username='petrova',
@@ -56,7 +58,16 @@ class Command(BaseCommand):
             is_staff=False,
             full_name='Сидоров Алексей Николаевич',
             role=UserRole.DISTRICT_ORDER,
-            district=north,
+            district=moskovsky,
+        )
+        self._upsert_user(
+            username='fullaccess',
+            password='fullaccess',
+            is_superuser=False,
+            is_staff=False,
+            full_name='Кузнецова Ольга Владимировна',
+            role=UserRole.FULL_ACCESS,
+            district=None,
         )
 
         self.stdout.write(self.style.SUCCESS('Dev-данные авторизации созданы/обновлены.'))

@@ -183,6 +183,69 @@ class IncidentsApiTests(APITestCase):
         self.assertEqual(allowed.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(allowed.json()), 4)
 
+    def test_users_create_admin_only(self):
+        self.client.login(username='ivanov', password='ivanov')
+        denied = self.client.post(
+            '/users',
+            {'ldapLogin': 'newuser', 'password': 'Str0ng!Pass123', 'role': UserRole.DISTRICT_DAMAGE},
+            format='json',
+        )
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_users_create_success(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.post(
+            '/users',
+            {
+                'ldapLogin': 'newuser',
+                'password': 'Str0ng!Pass123',
+                'fullName': 'Новый Пользователь',
+                'role': UserRole.DISTRICT_ORDER,
+                'districtId': self.north.id,
+                'isActive': True,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        body = response.json()
+        self.assertEqual(body['ldapLogin'], 'newuser')
+        self.assertEqual(body['role'], UserRole.DISTRICT_ORDER)
+        self.assertEqual(body['districtId'], self.north.id)
+
+        created_user = User.objects.get(username='newuser')
+        self.assertTrue(created_user.check_password('Str0ng!Pass123'))
+
+    def test_users_create_duplicate_login(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.post(
+            '/users',
+            {'ldapLogin': 'ivanov', 'password': 'Str0ng!Pass123', 'role': UserRole.DISTRICT_DAMAGE},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+    def test_users_create_weak_password_rejected(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.post(
+            '/users',
+            {'ldapLogin': 'weakuser', 'password': '123', 'role': UserRole.DISTRICT_DAMAGE},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(User.objects.filter(username='weakuser').exists())
+
+    def test_export_current_table_damages(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.post('/exports/current-table', {'entityType': 'damages', 'archived': False}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        self.assertTrue(len(response.content) > 0)
+
+    def test_export_current_table_scoped_to_district(self):
+        self.client.login(username='ivanov', password='ivanov')
+        response = self.client.post('/exports/current-table', {'entityType': 'damages', 'archived': False}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_audit_history(self):
         self.client.login(username='ivanov', password='ivanov')
         self.client.put(f'/damages/{self.damage_central.id}', {'note': 'changed'}, format='json')

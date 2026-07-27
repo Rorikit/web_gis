@@ -1,10 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@/entities';
+import type { CreateUserPayload } from '@/shared/api/users.api';
 import { usersApi } from '@/shared/api/users.api';
 import { queryKeys } from '@/shared/types/query';
 import { useToastStore } from '@/shared/store/toast-store';
 
 export const useUsers = () => useQuery({ queryKey: queryKeys.users, queryFn: usersApi.list });
+
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+  const push = useToastStore((state) => state.push);
+  return useMutation({
+    mutationFn: (payload: CreateUserPayload) => usersApi.create(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      push({ kind: 'success', title: 'Пользователь создан' });
+    },
+    onError: () => push({ kind: 'error', title: 'Ошибка создания пользователя' }),
+  });
+};
 
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
