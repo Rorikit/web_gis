@@ -49,6 +49,21 @@ export const useArchiveDamage = () => {
   });
 };
 
+export const useOpenDamageOrder = (id: string) => {
+  const queryClient = useQueryClient();
+  const push = useToastStore((state) => state.push);
+  return useMutation({
+    mutationFn: () => damagesApi.openOrder(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['damages'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.damage(id) });
+      push({ kind: 'success', title: 'Ордер открыт' });
+    },
+    onError: () => push({ kind: 'error', title: 'Ошибка открытия ордера' }),
+  });
+};
+
 export const useUploadDamagePhoto = (id: string) => {
   const queryClient = useQueryClient();
   const push = useToastStore((state) => state.push);

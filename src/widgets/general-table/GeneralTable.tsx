@@ -4,6 +4,9 @@ import type { Damage } from '@/entities';
 import { districts } from '@/shared/constants/districts';
 import { Badge, Button, DataTable } from '@/shared/ui';
 
+const yesNo = (value: boolean) => (value ? 'Да' : 'Нет');
+const orDash = (value: string | number | null | undefined) => (value === null || value === undefined || value === '' ? '-' : value);
+
 const columns: ColumnDef<Damage>[] = [
   { header: '№', accessorKey: 'id', size: 90 },
   { header: 'Район', cell: ({ row }) => districts.find((item) => item.id === row.original.districtId)?.name ?? '-' },
@@ -12,12 +15,29 @@ const columns: ColumnDef<Damage>[] = [
   { header: 'Дата обнаружения', accessorKey: 'detectedAt' },
   { header: 'Дата устранения', accessorKey: 'fixedAt', cell: ({ getValue }) => String(getValue() ?? '-') },
   { header: '№ ордера', accessorKey: 'orderNumber' },
-  { header: 'Дата открытия ордера', accessorKey: 'orderOpenedAt' },
-  { header: 'Ордер открыт до', accessorKey: 'orderValidUntil' },
-  { header: 'Дата закрытия ордера', accessorKey: 'orderClosedAt', cell: ({ getValue }) => String(getValue() ?? '-') },
-  { header: 'Текущий/Гарантийный', accessorKey: 'orderKind' },
+  { header: 'Дата открытия ордера', accessorKey: 'orderOpenedAt', cell: ({ getValue }) => String(getValue() ?? '-') },
+  { header: 'Ордер открыт до', accessorKey: 'orderValidUntil', cell: ({ getValue }) => String(getValue() ?? '-') },
+  { header: 'От какого источника запитан', accessorKey: 'heatSource', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Текущее/Гидравлическое', accessorKey: 'damageType' },
+  { header: 'Адреса отключенных абонентов', accessorKey: 'disconnectedAddresses', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Характер повреждения', accessorKey: 'damageDescription', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Текущий/Гарантийный', accessorKey: 'orderKind', cell: ({ getValue }) => String(getValue() ?? '-') },
+  { header: 'З/зона, м²', accessorKey: 'greenZoneArea' },
+  { header: 'Асфальт, м²', accessorKey: 'asphaltArea' },
+  { header: 'Основная', accessorKey: 'improvementMain', cell: ({ getValue }) => yesNo(getValue() as boolean) },
+  { header: 'Внутрикварт. дорога', accessorKey: 'improvementInnerRoad', cell: ({ getValue }) => yesNo(getValue() as boolean) },
+  { header: 'Тротуар', accessorKey: 'improvementSidewalk', cell: ({ getValue }) => yesNo(getValue() as boolean) },
+  { header: 'Отмостка', accessorKey: 'improvementBlindArea', cell: ({ getValue }) => yesNo(getValue() as boolean) },
+  { header: 'Бордюр/поребрик, шт', accessorKey: 'curbCount' },
   { header: 'Состояние участка', accessorKey: 'areaState' },
-  { header: 'GIS', cell: ({ row }) => (row.original.gisPoint ? <Badge tone="success">● Есть точка</Badge> : <Badge>○ Нет точки</Badge>) },
+  { header: 'Исполнитель', accessorKey: 'contractorType' },
+  { header: '№ договора', accessorKey: 'contractNumber', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Дата подачи заявки', accessorKey: 'contractorRequestDate', cell: ({ getValue }) => String(getValue() ?? '-') },
+  { header: 'Срок выполнения по графику', accessorKey: 'plannedFinishDate', cell: ({ getValue }) => String(getValue() ?? '-') },
+  { header: 'Примечание', accessorKey: 'note', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Дата закрытия ордера', accessorKey: 'orderClosedAt', cell: ({ getValue }) => String(getValue() ?? '-') },
+  { header: 'Фотоотчёт', cell: ({ row }) => `${row.original.photos.length} фото` },
+  { header: 'Геолокация', cell: ({ row }) => (row.original.gisPoint ? <Badge tone="success">● Есть точка</Badge> : <Badge>○ Нет точки</Badge>) },
   { header: 'Открыть', cell: ({ row }) => <Button variant="secondary"><Link to={`/damages/${row.original.id}`}>Открыть</Link></Button> },
 ];
 
@@ -28,30 +48,5 @@ export const GeneralTable = ({ data, isLoading, isError }: { data: Damage[]; isL
     isLoading={isLoading}
     isError={isError}
     emptyTitle="Записи не найдены"
-    getRowDetails={(row) => (
-      <div className="details-grid">
-        <div className="details-item"><span>От какого источника запитан</span>{row.heatSource || '-'}</div>
-        <div className="details-item"><span>Признак повреждения</span>{row.damageType}</div>
-        <div className="details-item"><span>Отключенные абоненты</span>{row.disconnectedConsumers}</div>
-        <div className="details-item"><span>Характер повреждения</span>{row.damageDescription || '-'}</div>
-        <div className="details-item"><span>Зеленая зона, м²</span>{row.greenZoneArea}</div>
-        <div className="details-item"><span>Асфальт, м²</span>{row.asphaltArea}</div>
-        <div className="details-item"><span>Бордюры/поребрик, шт</span>{row.curbCount}</div>
-        <div className="details-item"><span>Благоустройство</span>
-          {[
-            row.improvementMain && 'основная',
-            row.improvementInnerRoad && 'внутриквартальная дорога',
-            row.improvementSidewalk && 'тротуар',
-            row.improvementBlindArea && 'отмостка',
-          ].filter(Boolean).join(', ') || '-'}
-        </div>
-        <div className="details-item"><span>Исполнитель благоустройства</span>{row.contractorType}</div>
-        <div className="details-item"><span>№ договора</span>{row.contractNumber || '-'}</div>
-        <div className="details-item"><span>Дата подачи заявки подрядчику</span>{row.contractorRequestDate || '-'}</div>
-        <div className="details-item"><span>Срок выполнения работ по графику</span>{row.plannedFinishDate || '-'}</div>
-        <div className="details-item"><span>Примечание</span>{row.note || '-'}</div>
-        <div className="details-item"><span>Фото</span>{`Фото: ${row.photos.length}`}</div>
-      </div>
-    )}
   />
 );

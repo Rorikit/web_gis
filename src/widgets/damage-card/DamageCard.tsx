@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import type { Damage } from '@/entities';
 import { AuditHistoryTable } from '@/features/audit-history/ui/AuditHistoryTable';
 import { useCurrentUser } from '@/features/auth/hooks/useAuth';
-import { useUpdateDamage, useUploadDamagePhoto } from '@/features/damages/hooks/useDamages';
+import { useOpenDamageOrder, useUpdateDamage, useUploadDamagePhoto } from '@/features/damages/hooks/useDamages';
 import { useSaveDamagePoint } from '@/features/gis/hooks/useGis';
 import { GisMiniPreview } from '@/features/gis/ui/GisMiniPreview';
 import { GisPointPicker } from '@/features/gis/ui/GisPointPicker';
@@ -17,14 +17,19 @@ const schema = z.object({
   address: z.string(),
   networkType: z.enum(['ОТ', 'ГВС']),
   damageType: z.enum(['Текущее', 'Гидравлическое']),
+  detectedAt: z.string(),
+  fixedAt: z.string(),
   heatSource: z.string(),
+  disconnectedAddresses: z.string(),
   damageDescription: z.string(),
   note: z.string(),
   greenZoneArea: z.number(),
   asphaltArea: z.number(),
   curbCount: z.number(),
   improvementMain: z.boolean(),
+  improvementInnerRoad: z.boolean(),
   improvementSidewalk: z.boolean(),
+  improvementBlindArea: z.boolean(),
 });
 
 type DamageForm = z.infer<typeof schema>;
@@ -39,27 +44,35 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
   const update = useUpdateDamage(damage.id);
   const savePoint = useSaveDamagePoint(damage.id);
   const uploadPhoto = useUploadDamagePhoto(damage.id);
+  const openOrder = useOpenDamageOrder(damage.id);
   const canEditMain = hasPermission(user?.role, 'damage.update');
   const { register, handleSubmit, reset, setValue } = useForm<DamageForm>({
     defaultValues: {
       address: damage.address,
       networkType: damage.networkType,
       damageType: damage.damageType,
+      detectedAt: damage.detectedAt,
+      fixedAt: damage.fixedAt ?? '',
       heatSource: damage.heatSource,
+      disconnectedAddresses: damage.disconnectedAddresses,
       damageDescription: damage.damageDescription,
       note: damage.note,
       greenZoneArea: damage.greenZoneArea,
       asphaltArea: damage.asphaltArea,
       curbCount: damage.curbCount,
       improvementMain: damage.improvementMain,
+      improvementInnerRoad: damage.improvementInnerRoad,
       improvementSidewalk: damage.improvementSidewalk,
+      improvementBlindArea: damage.improvementBlindArea,
     },
   });
 
   const disabled = !canEditMain || update.isPending;
   const onSubmit = (values: DamageForm) => {
     const result = schema.safeParse(values);
-    if (result.success) update.mutate(result.data, { onSuccess: () => navigate('/damages') });
+    if (result.success) {
+      update.mutate({ ...result.data, fixedAt: result.data.fixedAt || null }, { onSuccess: () => navigate('/damages') });
+    }
   };
 
   const tabs = useMemo(
@@ -82,8 +95,11 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
                 <option>Гидравлическое</option>
               </Select>
             </FormField>
+            <FormField label="Дата обнаружения"><Input type="date" disabled={disabled} {...register('detectedAt')} /></FormField>
+            <FormField label="Дата устранения"><Input type="date" disabled={disabled} {...register('fixedAt')} /></FormField>
             <FormField label="Источник тепла"><Input disabled={disabled} {...register('heatSource')} /></FormField>
-            <FormField label="Описание"><Textarea disabled={disabled} {...register('damageDescription')} /></FormField>
+            <FormField label="Адреса отключенных абонентов"><Textarea disabled={disabled} {...register('disconnectedAddresses')} /></FormField>
+            <FormField label="Характер повреждения"><Textarea disabled={disabled} {...register('damageDescription')} /></FormField>
             <FormField label="Примечание"><Textarea disabled={disabled} {...register('note')} /></FormField>
           </div>
         ),
@@ -91,12 +107,24 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
       {
         id: 'order',
         label: 'Ордер',
-        content: (
+        content: damage.orderOpenedAt ? (
           <div className="details-grid">
             <div className="details-item"><span>№ ордера</span>{damage.orderNumber}</div>
             <div className="details-item"><span>Открыт</span>{damage.orderOpenedAt}</div>
             <div className="details-item"><span>Действует до</span>{damage.orderValidUntil}</div>
             <div className="details-item"><span>Закрыт</span>{damage.orderClosedAt ?? '-'}</div>
+            <Button type="button" variant="secondary"><Link to={`/orders/${damage.id}`}>Перейти к ордеру</Link></Button>
+          </div>
+        ) : (
+          <div className="details-grid">
+            <div className="details-item"><span>Статус</span>Ордер не открыт</div>
+            <Button
+              type="button"
+              disabled={!canEditMain || openOrder.isPending}
+              onClick={() => openOrder.mutate()}
+            >
+              {openOrder.isPending ? 'Открытие…' : 'Открыть ордер'}
+            </Button>
           </div>
         ),
       },
@@ -109,7 +137,9 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
             <FormField label="Асфальт"><Input type="number" disabled={disabled} {...register('asphaltArea', { valueAsNumber: true })} /></FormField>
             <FormField label="Бортовой камень"><Input type="number" disabled={disabled} {...register('curbCount', { valueAsNumber: true })} /></FormField>
             <FormField label="Проезжая часть"><Checkbox disabled={disabled} {...register('improvementMain')} /></FormField>
+            <FormField label="Внутриквартальная дорога"><Checkbox disabled={disabled} {...register('improvementInnerRoad')} /></FormField>
             <FormField label="Тротуар"><Checkbox disabled={disabled} {...register('improvementSidewalk')} /></FormField>
+            <FormField label="Отмостка"><Checkbox disabled={disabled} {...register('improvementBlindArea')} /></FormField>
           </div>
         ),
       },
@@ -150,7 +180,7 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
       },
       { id: 'history', label: 'История', content: <AuditHistoryTable entityType="damage" entityId={damage.id} /> },
     ],
-    [damage, disabled, register, canEditMain, uploadPhoto],
+    [damage, disabled, register, canEditMain, uploadPhoto, openOrder],
   );
 
   return (

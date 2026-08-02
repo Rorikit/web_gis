@@ -48,7 +48,7 @@ class IncidentsApiTests(APITestCase):
             order_valid_until=date(2026, 6, 10),
             heat_source='ТЭЦ-3',
             damage_type=DamageType.CURRENT,
-            disconnected_consumers=4,
+            disconnected_addresses='ул. Ленина, 10',
             damage_description='Повреждение трубопровода',
             order_kind=OrderKind.CURRENT,
             green_zone_area=12,
@@ -78,7 +78,7 @@ class IncidentsApiTests(APITestCase):
             order_valid_until=date(2026, 6, 14),
             heat_source='Котельная Северная',
             damage_type=DamageType.HYDRAULIC,
-            disconnected_consumers=0,
+            disconnected_addresses='',
             damage_description='Повреждение после испытаний',
             order_kind=OrderKind.GUARANTEE,
             green_zone_area=0,
@@ -96,6 +96,46 @@ class IncidentsApiTests(APITestCase):
             archived=False,
         )
 
+        self.damage_without_order = Damage.objects.create(
+            district=self.central,
+            address='ул. Свободы, 5',
+            network_type=NetworkType.OT,
+            detected_at=date(2026, 5, 20),
+            heat_source='ТЭЦ-3',
+            damage_type=DamageType.CURRENT,
+            damage_description='Повреждение без ордера',
+            area_state=AreaState.IN_PROGRESS,
+            contractor_type=ContractorType.CONTRACTOR,
+            archived=False,
+        )
+
+    def test_damage_without_order_excluded_from_orders_list(self):
+        self.client.login(username='admin', password='admin')
+
+        response = self.client.get('/orders', {'archived': 'false'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = [item['id'] for item in response.json()]
+        self.assertNotIn(self.damage_without_order.id, ids)
+        self.assertIn(self.damage_central.id, ids)
+
+    def test_open_order_creates_order_fields_and_surfaces_in_orders_list(self):
+        self.client.login(username='ivanov', password='ivanov')
+
+        response = self.client.post(f'/damages/{self.damage_without_order.id}/open-order')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertTrue(body['orderNumber'])
+        self.assertIsNotNone(body['orderOpenedAt'])
+        self.assertEqual(body['orderKind'], OrderKind.CURRENT)
+
+        orders_response = self.client.get('/orders', {'archived': 'false'})
+        ids = [item['id'] for item in orders_response.json()]
+        self.assertIn(self.damage_without_order.id, ids)
+
+        # opening twice is rejected
+        again = self.client.post(f'/damages/{self.damage_without_order.id}/open-order')
+        self.assertEqual(again.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_damage_list_filtered_by_district(self):
         self.client.login(username='ivanov', password='ivanov')
 
@@ -103,14 +143,28 @@ class IncidentsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         body = response.json()
-        self.assertEqual(len(body), 1)
-        self.assertEqual(body[0]['id'], self.damage_central.id)
+        ids = {item['id'] for item in body}
+        self.assertEqual(ids, {self.damage_central.id, self.damage_without_order.id})
 
-    def test_damage_update_forbidden_for_order_role(self):
+    def test_damage_update_allowed_for_order_role_same_district(self):
+        # ТЗ раздел Б: техник по повреждениям и техник по ордерам одного района имеют
+        # одинаковый набор прав на поля повреждения/ордера.
         self.client.login(username='sidorov', password='sidorov')
 
         response = self.client.put(
             f'/damages/{self.damage_north.id}',
+            {'note': 'new note'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.damage_north.refresh_from_db()
+        self.assertEqual(self.damage_north.note, 'new note')
+
+    def test_damage_update_forbidden_for_foreign_district_order_role(self):
+        self.client.login(username='sidorov', password='sidorov')
+
+        response = self.client.put(
+            f'/damages/{self.damage_central.id}',
             {'note': 'new note'},
             format='json',
         )

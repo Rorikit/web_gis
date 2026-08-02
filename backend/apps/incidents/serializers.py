@@ -17,14 +17,14 @@ class DamageWriteSerializer(serializers.Serializer):
     networkType = serializers.ChoiceField(choices=NetworkType.choices, required=False)
     detectedAt = serializers.DateField(required=False)
     fixedAt = serializers.DateField(required=False, allow_null=True)
-    orderNumber = serializers.CharField(required=False)
-    orderOpenedAt = serializers.DateField(required=False)
-    orderValidUntil = serializers.DateField(required=False)
+    orderNumber = serializers.CharField(required=False, allow_blank=True)
+    orderOpenedAt = serializers.DateField(required=False, allow_null=True)
+    orderValidUntil = serializers.DateField(required=False, allow_null=True)
     heatSource = serializers.CharField(required=False, allow_blank=True)
     damageType = serializers.ChoiceField(choices=DamageType.choices, required=False)
-    disconnectedConsumers = serializers.IntegerField(required=False)
+    disconnectedAddresses = serializers.CharField(required=False, allow_blank=True)
     damageDescription = serializers.CharField(required=False, allow_blank=True)
-    orderKind = serializers.ChoiceField(choices=OrderKind.choices, required=False)
+    orderKind = serializers.ChoiceField(choices=OrderKind.choices, required=False, allow_null=True)
     greenZoneArea = serializers.IntegerField(required=False)
     asphaltArea = serializers.IntegerField(required=False)
     improvementMain = serializers.BooleanField(required=False)
@@ -105,7 +105,7 @@ def serialize_damage(item: Damage) -> dict[str, Any]:
         'orderValidUntil': item.order_valid_until,
         'heatSource': item.heat_source,
         'damageType': item.damage_type,
-        'disconnectedConsumers': item.disconnected_consumers,
+        'disconnectedAddresses': item.disconnected_addresses,
         'damageDescription': item.damage_description,
         'orderKind': item.order_kind,
         'greenZoneArea': item.green_zone_area,

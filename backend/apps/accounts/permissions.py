@@ -8,17 +8,17 @@ PermissionName = str
 
 
 PERMISSION_MATRIX: dict[PermissionName, set[str]] = {
-    'damage.create': {UserRole.DISTRICT_DAMAGE, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    'damage.create': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
     'damage.read': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
-    'damage.update': {UserRole.DISTRICT_DAMAGE, UserRole.FULL_ACCESS, UserRole.ADMIN},
-    'order.read': {UserRole.DISTRICT_ORDER, UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
-    'order.update': {UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    'damage.update': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    'order.read': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    'order.update': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
     'ooppprFields.update': {UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
     'users.read': {UserRole.ADMIN},
     'users.create': {UserRole.ADMIN},
     'users.update': {UserRole.ADMIN},
     'reports.createReference': {UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
-    'reports.createDamageCard': {UserRole.DISTRICT_DAMAGE, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    'reports.createDamageCard': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
 }
 
 

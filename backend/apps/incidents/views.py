@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
@@ -18,7 +18,7 @@ from apps.accounts.models import District, UserRole
 from apps.accounts.permissions import can_access_district, get_user_role, has_any_permission, has_permission
 from apps.accounts.serializers import serialize_user
 
-from .models import AuditEvent, Damage, GisPoint, Photo
+from .models import AuditEvent, Damage, GisPoint, OrderKind, Photo
 from .reports import build_current_table_workbook, build_damage_card_document, build_reference_workbook
 from .serializers import DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserCreateSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
 from .services import apply_damage_changes, apply_order_changes, create_audit_event, default_damage_payload
@@ -130,7 +130,7 @@ class DamageListCreateView(APIView):
             'order_valid_until': payload['orderValidUntil'],
             'heat_source': payload['heatSource'],
             'damage_type': payload['damageType'],
-            'disconnected_consumers': payload['disconnectedConsumers'],
+            'disconnected_addresses': payload['disconnectedAddresses'],
             'damage_description': payload['damageDescription'],
             'order_kind': payload['orderKind'],
             'green_zone_area': payload['greenZoneArea'],
@@ -213,8 +213,34 @@ class DamageArchiveView(APIView):
             return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
 
         payload = {'archived': True}
-        if damage.order_closed_at is None:
+        if damage.order_opened_at is not None and damage.order_closed_at is None:
             payload['orderClosedAt'] = timezone.localdate()
+
+        damage = apply_damage_changes(damage, payload, request.user, entity_type='damage')
+        damage = get_damage_or_404(damage.id)
+        return Response(serialize_damage(damage), status=status.HTTP_200_OK)
+
+
+class DamageOpenOrderView(APIView):
+    def post(self, request, damage_id: str):
+        denied = require_permission(request, 'damage.update')
+        if denied:
+            return denied
+
+        damage = get_damage_or_404(damage_id)
+        if not can_access_district(request.user, damage.district_id):
+            return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
+
+        if damage.order_opened_at is not None:
+            return Response({'detail': 'Ордер уже открыт'}, status=status.HTTP_400_BAD_REQUEST)
+
+        today = timezone.localdate()
+        payload = {
+            'orderNumber': f'ORD-{today:%Y%m%d}-{damage.id.rsplit("-", 1)[-1]}',
+            'orderOpenedAt': today,
+            'orderValidUntil': today + timedelta(days=30),
+            'orderKind': OrderKind.CURRENT,
+        }
 
         damage = apply_damage_changes(damage, payload, request.user, entity_type='damage')
         damage = get_damage_or_404(damage.id)
@@ -228,7 +254,7 @@ class OrdersListView(APIView):
             return denied
 
         archived = parse_bool(request.query_params.get('archived'), default=False)
-        queryset = base_damage_queryset().filter(archived=archived)
+        queryset = base_damage_queryset().filter(archived=archived, order_opened_at__isnull=False)
         queryset = filter_by_district_access(queryset, request.user)
 
         return Response([serialize_order(item) for item in queryset], status=status.HTTP_200_OK)
@@ -297,7 +323,7 @@ class GisOpenOrdersView(APIView):
         if denied:
             return denied
 
-        queryset = base_damage_queryset().filter(archived=False)
+        queryset = base_damage_queryset().filter(archived=False, order_opened_at__isnull=False)
         queryset = filter_by_district_access(queryset, request.user)
         return Response([serialize_order(item) for item in queryset], status=status.HTTP_200_OK)
 
@@ -308,7 +334,7 @@ class GisArchivedOrdersView(APIView):
         if denied:
             return denied
 
-        queryset = base_damage_queryset().filter(archived=True)
+        queryset = base_damage_queryset().filter(archived=True, order_opened_at__isnull=False)
         queryset = filter_by_district_access(queryset, request.user)
 
         from_value = request.query_params.get('from')

@@ -9,6 +9,7 @@ export const endpoints = {
     detail: (id: string) => `/damages/${id}`,
     archive: (id: string) => `/damages/${id}/archive`,
     uploadPhoto: (id: string) => `/damages/${id}/photos`,
+    openOrder: (id: string) => `/damages/${id}/open-order`,
   },
   orders: {
     list: '/orders',

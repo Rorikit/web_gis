@@ -15,13 +15,13 @@ export type Damage = {
   detectedAt: string;
   fixedAt: string | null;
   orderNumber: string;
-  orderOpenedAt: string;
-  orderValidUntil: string;
+  orderOpenedAt: string | null;
+  orderValidUntil: string | null;
   heatSource: string;
   damageType: DamageType;
-  disconnectedConsumers: number;
+  disconnectedAddresses: string;
   damageDescription: string;
-  orderKind: OrderKind;
+  orderKind: OrderKind | null;
   greenZoneArea: number;
   asphaltArea: number;
   improvementMain: boolean;

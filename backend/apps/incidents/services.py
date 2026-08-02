@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import District
-from .models import AreaState, AuditEvent, ContractorType, Damage, DamageType, NetworkType, OrderKind
+from .models import AreaState, AuditEvent, ContractorType, Damage, DamageType, NetworkType
 
 
 DAMAGE_FIELD_MAP = {
@@ -20,7 +20,7 @@ DAMAGE_FIELD_MAP = {
     'orderValidUntil': 'order_valid_until',
     'heatSource': 'heat_source',
     'damageType': 'damage_type',
-    'disconnectedConsumers': 'disconnected_consumers',
+    'disconnectedAddresses': 'disconnected_addresses',
     'damageDescription': 'damage_description',
     'orderKind': 'order_kind',
     'greenZoneArea': 'green_zone_area',
@@ -64,14 +64,14 @@ def default_damage_payload(user) -> dict:
         'networkType': NetworkType.OT,
         'detectedAt': today,
         'fixedAt': None,
-        'orderNumber': f'ORD-{today.year}-{today.month:02d}-{today.day:02d}',
-        'orderOpenedAt': today,
-        'orderValidUntil': today + timedelta(days=30),
+        'orderNumber': '',
+        'orderOpenedAt': None,
+        'orderValidUntil': None,
         'heatSource': '',
         'damageType': DamageType.CURRENT,
-        'disconnectedConsumers': 0,
+        'disconnectedAddresses': '',
         'damageDescription': '',
-        'orderKind': OrderKind.CURRENT,
+        'orderKind': None,
         'greenZoneArea': 0,
         'asphaltArea': 0,
         'improvementMain': False,
