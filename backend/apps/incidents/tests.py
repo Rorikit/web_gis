@@ -60,7 +60,6 @@ class IncidentsApiTests(APITestCase):
             curb_count=3,
             area_state=AreaState.IN_PROGRESS,
             contractor_type=ContractorType.CONTRACTOR,
-            contractor_name='Подрядчик #1',
             contract_number='Д-44/26',
             planned_finish_date=date(2026, 5, 28),
             note='Контроль восстановления',
@@ -90,7 +89,6 @@ class IncidentsApiTests(APITestCase):
             curb_count=0,
             area_state=AreaState.READY_TO_CLOSE,
             contractor_type=ContractorType.URTS,
-            contractor_name='УРТС',
             contract_number='',
             planned_finish_date=date(2026, 5, 25),
             archived=False,
@@ -198,7 +196,7 @@ class IncidentsApiTests(APITestCase):
         response = self.client.put(
             f'/orders/{self.damage_central.id}',
             {
-                'contractorName': 'ООО Ромашка',
+                'contractorType': 'УРТС',
                 'contractNumber': 'K-100',
                 'plannedFinishDate': '2026-06-01',
                 'note': 'ok',
@@ -209,7 +207,7 @@ class IncidentsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.damage_central.refresh_from_db()
-        self.assertEqual(self.damage_central.contractor_name, 'ООО Ромашка')
+        self.assertEqual(self.damage_central.contractor_type, 'УРТС')
         self.assertEqual(self.damage_central.address, 'ул. Ленина, 12')
 
     def test_gis_save_point(self):
@@ -307,3 +305,97 @@ class IncidentsApiTests(APITestCase):
         response = self.client.get(f'/audit/damage/{self.damage_central.id}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.json()), 1)
+
+    def test_order_update_district_role_can_edit_order_dates(self):
+        self.client.login(username='ivanov', password='ivanov')
+
+        response = self.client.put(
+            f'/orders/{self.damage_central.id}',
+            {
+                'openedAt': '2026-05-12',
+                'validUntil': '2026-07-01',
+                'closedAt': '2026-06-20',
+                'contractorRequestDate': '2026-05-15',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        body = response.json()
+        self.assertEqual(body['openedAt'], '2026-05-12')
+        self.assertEqual(body['validUntil'], '2026-07-01')
+        self.assertEqual(body['closedAt'], '2026-06-20')
+        self.assertEqual(body['contractorRequestDate'], '2026-05-15')
+
+    def test_order_update_oopppr_cannot_edit_order_dates(self):
+        self.client.login(username='petrova', password='petrova')
+
+        response = self.client.put(
+            f'/orders/{self.damage_central.id}',
+            {'openedAt': '2020-01-01', 'closedAt': '2020-02-02', 'note': 'ООППР'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.damage_central.refresh_from_db()
+        self.assertEqual(self.damage_central.order_opened_at, date(2026, 5, 11))
+        self.assertIsNone(self.damage_central.order_closed_at)
+        self.assertEqual(self.damage_central.note, 'ООППР')
+
+    def test_order_serializer_exposes_appendix5_fields(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.get(f'/orders/{self.damage_central.id}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        body = response.json()
+        for field in (
+            'orderNumber', 'address', 'orderKind', 'openedAt', 'validUntil', 'closedAt',
+            'greenZoneArea', 'asphaltArea', 'improvementMain', 'improvementInnerRoad',
+            'improvementSidewalk', 'improvementBlindArea', 'curbCount', 'areaState',
+            'contractorType', 'contractNumber', 'contractorRequestDate', 'plannedFinishDate',
+            'note', 'photos', 'gisPoint',
+        ):
+            self.assertIn(field, body)
+
+    def test_reference_report_counts_orders_by_district(self):
+        from openpyxl import load_workbook
+        import io
+
+        Damage.objects.filter(pk=self.damage_north.pk).update(
+            order_kind=OrderKind.GUARANTEE,
+            order_opened_at=date(2026, 1, 5),
+            order_closed_at=date(2026, 3, 3),
+        )
+
+        self.client.login(username='petrova', password='petrova')
+        response = self.client.post('/reports/reference', {'reportDate': '2026-06-01'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        sheet = load_workbook(io.BytesIO(response.content)).active
+        rows = {row[0]: row[1:] for row in sheet.iter_rows(min_row=6, values_only=True)}
+
+        # Центральный: ордер открыт 11.05.2026 и не закрыт -> «Открыто/Текущие» + «в работе»
+        self.assertEqual(rows['Центральный район'][:6], (0, 0, 1, 0, 1, 0))
+        # Северный: гарантийный ордер закрыт 03.03.2026 -> «Закрыто/Гарантийные»
+        self.assertEqual(rows['Северный район'][:6], (0, 1, 0, 0, 0, 0))
+
+    def test_damage_card_report_uses_appendix2_fields(self):
+        self.client.login(username='ivanov', password='ivanov')
+        response = self.client.post(
+            '/reports/damage-card',
+            {'damageId': self.damage_central.id, 'fields': {'startChamber': 'ТК-15', 'unknownField': 'x'}},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(len(response.content) > 0)
+
+    def test_order_close_date_moves_order_to_archive(self):
+        self.client.login(username='ivanov', password='ivanov')
+
+        self.client.put(f'/orders/{self.damage_central.id}', {'closedAt': '2026-06-20'}, format='json')
+        self.damage_central.refresh_from_db()
+        self.assertTrue(self.damage_central.archived)
+
+        self.client.put(f'/orders/{self.damage_central.id}', {'closedAt': None}, format='json')
+        self.damage_central.refresh_from_db()
+        self.assertFalse(self.damage_central.archived)

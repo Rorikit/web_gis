@@ -43,11 +43,17 @@ DAMAGE_FIELD_MAP = {
 ORDER_FIELD_MAP = {
     'address': 'address',
     'orderKind': 'order_kind',
+    'openedAt': 'order_opened_at',
+    'validUntil': 'order_valid_until',
+    'closedAt': 'order_closed_at',
     'areaState': 'area_state',
-    'contractorName': 'contractor_name',
+    'contractorType': 'contractor_type',
     'contractNumber': 'contract_number',
+    'contractorRequestDate': 'contractor_request_date',
     'plannedFinishDate': 'planned_finish_date',
     'note': 'note',
+    # выставляется только самим бэкендом, в OrderWriteSerializer поля нет
+    'archived': 'archived',
 }
 
 

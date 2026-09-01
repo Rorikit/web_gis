@@ -6,6 +6,19 @@ import { useArchiveOrder } from '@/features/orders/hooks/useOrders';
 import { hasPermission } from '@/features/permissions/model/permissions';
 import { Badge, Button, DataTable } from '@/shared/ui';
 
+const orDash = (value: string | number | null | undefined) => (value === null || value === undefined || value === '' ? '-' : value);
+
+const improvementSummary = (order: Order) => {
+  const parts = [
+    ['Основная', order.improvementMain],
+    ['Внутрикварт. дорога', order.improvementInnerRoad],
+    ['Тротуар', order.improvementSidewalk],
+    ['Отмостка', order.improvementBlindArea],
+  ] as const;
+  const selected = parts.filter(([, flag]) => flag).map(([label]) => label);
+  return selected.length ? selected.join(', ') : '-';
+};
+
 const OrderRowActions = ({ order }: { order: Order }) => {
   const { data: user } = useCurrentUser();
   const archive = useArchiveOrder();
@@ -26,17 +39,27 @@ const OrderRowActions = ({ order }: { order: Order }) => {
   );
 };
 
+// Приложение №5 «Ордера»
 const columns: ColumnDef<Order>[] = [
-  { header: '№', accessorKey: 'id' },
+  { id: 'rowNumber', header: '№ п/п', cell: ({ row }) => row.index + 1, size: 70 },
   { header: '№ ордера', accessorKey: 'orderNumber' },
   { header: 'Адрес', accessorKey: 'address' },
-  { header: 'Тип ордера', accessorKey: 'orderKind' },
-  { header: 'Дата открытия', accessorKey: 'openedAt' },
-  { header: 'Ордер открыт до', accessorKey: 'validUntil' },
-  { header: 'Дата закрытия', accessorKey: 'closedAt', cell: ({ getValue }) => String(getValue() ?? '-') },
-  { header: 'Состояние', accessorKey: 'areaState' },
-  { header: 'Исполнитель', accessorKey: 'contractorName' },
-  { header: 'GIS', cell: ({ row }) => (row.original.gisPoint ? <Badge tone="success">● Есть точка</Badge> : <Badge>○ Нет точки</Badge>) },
+  { header: 'Текущ./Гарант.', accessorKey: 'orderKind', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Дата открытия ордера', accessorKey: 'openedAt', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Ордер открыт до', accessorKey: 'validUntil', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Дата закрытия ордера', accessorKey: 'closedAt', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'З/зона, м²', accessorKey: 'greenZoneArea' },
+  { header: 'Асфальт, м²', accessorKey: 'asphaltArea' },
+  { header: 'Основная/внутрикварт. дорога, тротуар, отмостка', cell: ({ row }) => improvementSummary(row.original) },
+  { header: 'Бордюр/поребрик', accessorKey: 'curbCount' },
+  { header: 'Состояние участка', accessorKey: 'areaState' },
+  { header: 'Подрядчик/УРТС/Участок', accessorKey: 'contractorType' },
+  { header: '№ договора', accessorKey: 'contractNumber', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Дата подачи заявки на восстановление благоустройства', accessorKey: 'contractorRequestDate', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Срок выполнения работ по графику', accessorKey: 'plannedFinishDate', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Примечание', accessorKey: 'note', cell: ({ getValue }) => orDash(getValue() as string) },
+  { header: 'Фотоотчёт', cell: ({ row }) => `${row.original.photos?.length ?? 0} фото` },
+  { header: 'Геолокация на карте', cell: ({ row }) => (row.original.gisPoint ? <Badge tone="success">● Есть точка</Badge> : <Badge>○ Нет точки</Badge>) },
   { header: 'Редактировать', cell: ({ row }) => <OrderRowActions order={row.original} /> },
 ];
 
@@ -47,13 +70,5 @@ export const OrdersTable = ({ data, isLoading, isError }: { data: Order[]; isLoa
     isLoading={isLoading}
     isError={isError}
     emptyTitle="Ордера не найдены"
-    getRowDetails={(row) => (
-      <div className="details-grid">
-        <div className="details-item"><span>Договор</span>{row.contractNumber || '-'}</div>
-        <div className="details-item"><span>Срок выполнения</span>{row.plannedFinishDate || '-'}</div>
-        <div className="details-item"><span>Тип исполнителя</span>{row.contractorType}</div>
-        <div className="details-item"><span>Примечание</span>{row.note || '-'}</div>
-      </div>
-    )}
   />
 );

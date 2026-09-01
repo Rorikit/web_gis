@@ -8,7 +8,7 @@ const yesNo = (value: boolean) => (value ? 'Да' : 'Нет');
 const orDash = (value: string | number | null | undefined) => (value === null || value === undefined || value === '' ? '-' : value);
 
 const columns: ColumnDef<Damage>[] = [
-  { header: '№', accessorKey: 'id', size: 90 },
+  { id: 'rowNumber', header: '№ п/п', cell: ({ row }) => row.index + 1, size: 70 },
   { header: 'Район', cell: ({ row }) => districts.find((item) => item.id === row.original.districtId)?.name ?? '-' },
   { header: 'Адрес', accessorKey: 'address' },
   { header: 'ОТ/ГВС', accessorKey: 'networkType' },

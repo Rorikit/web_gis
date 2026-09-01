@@ -123,13 +123,13 @@ contractorType: Подрядчик | УРТС | Участок
   "detectedAt": "string",
   "fixedAt": "string|null",
   "orderNumber": "string",
-  "orderOpenedAt": "string",
-  "orderValidUntil": "string",
+  "orderOpenedAt": "string|null",
+  "orderValidUntil": "string|null",
   "heatSource": "string",
   "damageType": "Текущее|Гидравлическое",
-  "disconnectedConsumers": "number",
+  "disconnectedAddresses": "string",
   "damageDescription": "string",
-  "orderKind": "Текущий|Гарантийный",
+  "orderKind": "Текущий|Гарантийный|null",
   "greenZoneArea": "number",
   "asphaltArea": "number",
   "improvementMain": "boolean",
@@ -160,17 +160,25 @@ contractorType: Подрядчик | УРТС | Участок
   "districtId": "string",
   "orderNumber": "string",
   "address": "string",
-  "orderKind": "Текущий|Гарантийный",
-  "openedAt": "string",
-  "validUntil": "string",
+  "orderKind": "Текущий|Гарантийный|null",
+  "openedAt": "string|null",
+  "validUntil": "string|null",
   "closedAt": "string|null",
+  "greenZoneArea": "number",
+  "asphaltArea": "number",
+  "improvementMain": "boolean",
+  "improvementInnerRoad": "boolean",
+  "improvementSidewalk": "boolean",
+  "improvementBlindArea": "boolean",
+  "curbCount": "number",
   "areaState": "В РАБОТЕ|ГОТОВ К ЗАКРЫТИЮ",
   "contractorType": "Подрядчик|УРТС|Участок",
-  "contractorName": "string",
   "contractNumber": "string",
+  "contractorRequestDate": "string|null",
   "plannedFinishDate": "string|null",
   "note": "string",
   "gisPoint": "GisPoint|null",
+  "photos": "Photo[]",
   "archived": "boolean",
   "createdAt": "string",
   "updatedAt": "string"
@@ -308,10 +316,12 @@ contractorType: Подрядчик | УРТС | Участок
 - Auth: требуется (`order.update` или `ooppprFields.update` в зависимости от полей)
 - Body: partial `Order`
 - Фактически из текущей UI-формы отправляются:
-  - `contractorName`
-  - `contractNumber`
-  - `plannedFinishDate`
-  - `note`
+  - `address`, `orderKind`, `openedAt`, `validUntil`, `closedAt`, `areaState`,
+    `contractorRequestDate` — доступны при `order.update`
+  - `contractorType`, `contractNumber`, `plannedFinishDate`, `note` — доступны при `ooppprFields.update`
+- Роль ООППР ограничена сервером четырьмя полями: `contractorType`, `contractNumber`,
+  `plannedFinishDate`, `note` (поля 21, 22, 24, 25 ТЗ)
+- Проставленная `closedAt` переводит ордер в архив (`archived: true`), очистка — возвращает обратно
 - Success:
   - `200` -> `Order`
 - Errors:
@@ -448,21 +458,28 @@ contractorType: Подрядчик | УРТС | Участок
 }
 ```
 
+- Справка формируется по форме Приложения №1 ТЗ: строка на каждый район, столбцы
+  «Закрыто в <год> году» (текущие/гарантийные), «Открыто» (текущие/гарантийные)
+  и «в т.ч. информация по работам» (в работе / готов к закрытию), плюс строки «Итого» и «ВСЕГО».
 - Success:
   - `200` -> файл (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
 
 ### POST `/reports/damage-card`
 
 - Auth: требуется (`reports.createDamageCard`)
-- Body (текущий минимум из UI):
+- Body:
 
 ```json
 {
   "damageId": "string",
+  "fields": { "<имя поля Приложения №2>": "string" },
   "additionalInfo": "string"
 }
 ```
 
+- Отчет строится по форме Приложения №2 ТЗ: п.1-4 берутся из карточки повреждения,
+  п.5-26 (кроме п.15 — графическая схема) приходят в `fields`; неизвестные ключи игнорируются.
+  Незаполненные пункты выводятся пустой строкой для заполнения от руки.
 - Success:
   - `200` -> файл (`application/vnd.openxmlformats-officedocument.wordprocessingml.document`)
 

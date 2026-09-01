@@ -32,9 +32,9 @@ export const OrderMapPage = () => {
       if (filters.orderKind && order.orderKind !== filters.orderKind) return false;
       if (filters.status === 'open' && order.closedAt) return false;
       if (filters.status === 'closed' && !order.closedAt) return false;
-      if (filters.periodFrom && order.openedAt < filters.periodFrom) return false;
-      if (filters.periodTo && order.openedAt > filters.periodTo) return false;
-      if (contractor && !order.contractorName.toLowerCase().includes(contractor)) return false;
+      if (filters.periodFrom && (!order.openedAt || order.openedAt < filters.periodFrom)) return false;
+      if (filters.periodTo && (!order.openedAt || order.openedAt > filters.periodTo)) return false;
+      if (contractor && !order.contractorType.toLowerCase().includes(contractor)) return false;
       return true;
     });
   }, [accessibleData, filters]);

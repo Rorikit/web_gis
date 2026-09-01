@@ -44,10 +44,14 @@ class DamageWriteSerializer(serializers.Serializer):
 
 class OrderWriteSerializer(serializers.Serializer):
     address = serializers.CharField(required=False, allow_blank=True)
-    orderKind = serializers.ChoiceField(choices=OrderKind.choices, required=False)
+    orderKind = serializers.ChoiceField(choices=OrderKind.choices, required=False, allow_null=True)
+    openedAt = serializers.DateField(required=False, allow_null=True)
+    validUntil = serializers.DateField(required=False, allow_null=True)
+    closedAt = serializers.DateField(required=False, allow_null=True)
     areaState = serializers.ChoiceField(choices=AreaState.choices, required=False)
-    contractorName = serializers.CharField(required=False, allow_blank=True)
+    contractorType = serializers.ChoiceField(choices=ContractorType.choices, required=False)
     contractNumber = serializers.CharField(required=False, allow_blank=True)
+    contractorRequestDate = serializers.DateField(required=False, allow_null=True)
     plannedFinishDate = serializers.DateField(required=False, allow_null=True)
     note = serializers.CharField(required=False, allow_blank=True)
 
@@ -141,13 +145,21 @@ def serialize_order(item: Damage) -> dict[str, Any]:
         'openedAt': item.order_opened_at,
         'validUntil': item.order_valid_until,
         'closedAt': item.order_closed_at,
+        'greenZoneArea': item.green_zone_area,
+        'asphaltArea': item.asphalt_area,
+        'improvementMain': item.improvement_main,
+        'improvementInnerRoad': item.improvement_inner_road,
+        'improvementSidewalk': item.improvement_sidewalk,
+        'improvementBlindArea': item.improvement_blind_area,
+        'curbCount': item.curb_count,
         'areaState': item.area_state,
         'contractorType': item.contractor_type,
-        'contractorName': item.contractor_name or item.contractor_type,
         'contractNumber': item.contract_number,
+        'contractorRequestDate': item.contractor_request_date,
         'plannedFinishDate': item.planned_finish_date,
         'note': item.note,
         'gisPoint': serialize_gis_point(point, item.address),
+        'photos': [serialize_photo(photo) for photo in item.photos.all()],
         'archived': item.archived,
         'createdAt': item.created_at,
         'updatedAt': item.updated_at,

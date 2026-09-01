@@ -14,14 +14,20 @@ import { Button, FormField, Input, Select, Tabs, Textarea } from '@/shared/ui';
 const schema = z.object({
   address: z.string(),
   orderKind: z.enum(['Текущий', 'Гарантийный']),
+  openedAt: z.string(),
+  validUntil: z.string(),
+  closedAt: z.string(),
   areaState: z.enum(['В РАБОТЕ', 'ГОТОВ К ЗАКРЫТИЮ']),
-  contractorName: z.string(),
+  contractorType: z.enum(['Подрядчик', 'УРТС', 'Участок']),
   contractNumber: z.string(),
+  contractorRequestDate: z.string(),
   plannedFinishDate: z.string(),
   note: z.string(),
 });
 
 type OrderForm = z.infer<typeof schema>;
+
+const emptyToNull = (value: string) => (value ? value : null);
 
 export const OrderCard = ({ order }: { order: Order }) => {
   const [tab, setTab] = useState('order');
@@ -31,17 +37,33 @@ export const OrderCard = ({ order }: { order: Order }) => {
   const savePoint = useSaveOrderPoint(order.id);
   const canEditOrder = hasPermission(user?.role, 'order.update');
   const canEditOopppr = hasPermission(user?.role, 'ooppprFields.update');
-  const { register, handleSubmit, setValue } = useForm<OrderForm>({
+  const { register, handleSubmit } = useForm<OrderForm>({
     defaultValues: {
       address: order.address,
-      orderKind: order.orderKind,
+      orderKind: order.orderKind ?? 'Текущий',
+      openedAt: order.openedAt ?? '',
+      validUntil: order.validUntil ?? '',
+      closedAt: order.closedAt ?? '',
       areaState: order.areaState,
-      contractorName: order.contractorName,
+      contractorType: order.contractorType,
       contractNumber: order.contractNumber,
+      contractorRequestDate: order.contractorRequestDate ?? '',
       plannedFinishDate: order.plannedFinishDate ?? '',
       note: order.note,
     },
   });
+
+  const onSubmit = (values: OrderForm) => {
+    const parsed = schema.parse(values);
+    update.mutate({
+      ...parsed,
+      openedAt: emptyToNull(parsed.openedAt),
+      validUntil: emptyToNull(parsed.validUntil),
+      closedAt: emptyToNull(parsed.closedAt),
+      contractorRequestDate: emptyToNull(parsed.contractorRequestDate),
+      plannedFinishDate: emptyToNull(parsed.plannedFinishDate),
+    });
+  };
 
   const tabs = [
     {
@@ -56,6 +78,12 @@ export const OrderCard = ({ order }: { order: Order }) => {
               <option>Текущий</option>
               <option>Гарантийный</option>
             </Select>
+          </FormField>
+          <FormField label="Дата открытия ордера"><Input type="date" disabled={!canEditOrder} {...register('openedAt')} /></FormField>
+          <FormField label="Ордер открыт до"><Input type="date" disabled={!canEditOrder} {...register('validUntil')} /></FormField>
+          <FormField label="Дата закрытия ордера"><Input type="date" disabled={!canEditOrder} {...register('closedAt')} /></FormField>
+          <FormField label="Дата подачи заявки на восстановление благоустройства">
+            <Input type="date" disabled={!canEditOrder} {...register('contractorRequestDate')} />
           </FormField>
         </div>
       ),
@@ -77,7 +105,13 @@ export const OrderCard = ({ order }: { order: Order }) => {
       label: 'ООППР',
       content: (
         <div className="form-grid">
-          <FormField label="Исполнитель"><Input disabled={!canEditOopppr} {...register('contractorName')} /></FormField>
+          <FormField label="Исполнитель благоустройства">
+            <Select disabled={!canEditOopppr} {...register('contractorType')}>
+              <option>Подрядчик</option>
+              <option>УРТС</option>
+              <option>Участок</option>
+            </Select>
+          </FormField>
           <FormField label="№ договора"><Input disabled={!canEditOopppr} {...register('contractNumber')} /></FormField>
           <FormField label="Срок выполнения"><Input type="date" disabled={!canEditOopppr} {...register('plannedFinishDate')} /></FormField>
           <FormField label="Примечание"><Textarea disabled={!canEditOopppr} {...register('note')} /></FormField>
@@ -103,7 +137,7 @@ export const OrderCard = ({ order }: { order: Order }) => {
   ];
 
   return (
-    <form className="card" onSubmit={handleSubmit((values) => update.mutate(schema.parse(values)))}>
+    <form className="card" onSubmit={handleSubmit(onSubmit)}>
       <h2 className="section-title">Карточка ордера</h2>
       <Tabs items={tabs} activeId={tab} onChange={setTab} />
       <div style={{ marginTop: 16 }}>
@@ -112,9 +146,8 @@ export const OrderCard = ({ order }: { order: Order }) => {
       <GisPointPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onSave={({ latitude, longitude, address }) => {
+        onSave={({ latitude, longitude }) => {
           savePoint.mutate({ latitude, longitude }, { onSuccess: () => setPickerOpen(false) });
-          if (address) setValue('address', address);
         }}
       />
     </form>

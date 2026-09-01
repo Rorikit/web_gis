@@ -72,7 +72,6 @@ class Damage(models.Model):
     curb_count = models.IntegerField(default=0)
     area_state = models.CharField(max_length=32, choices=AreaState.choices)
     contractor_type = models.CharField(max_length=32, choices=ContractorType.choices)
-    contractor_name = models.CharField(max_length=255, blank=True, default='')
     contract_number = models.CharField(max_length=128, blank=True)
     contractor_request_date = models.DateField(null=True, blank=True)
     planned_finish_date = models.DateField(null=True, blank=True)

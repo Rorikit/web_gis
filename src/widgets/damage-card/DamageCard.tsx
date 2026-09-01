@@ -46,7 +46,7 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
   const uploadPhoto = useUploadDamagePhoto(damage.id);
   const openOrder = useOpenDamageOrder(damage.id);
   const canEditMain = hasPermission(user?.role, 'damage.update');
-  const { register, handleSubmit, reset, setValue } = useForm<DamageForm>({
+  const { register, handleSubmit, reset } = useForm<DamageForm>({
     defaultValues: {
       address: damage.address,
       networkType: damage.networkType,
@@ -228,9 +228,8 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
       <GisPointPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onSave={({ latitude, longitude, address }) => {
+        onSave={({ latitude, longitude }) => {
           savePoint.mutate({ latitude, longitude }, { onSuccess: () => setPickerOpen(false) });
-          if (address) setValue('address', address);
         }}
       />
       <DamageCardReportModal damage={damage} open={reportOpen} onClose={() => setReportOpen(false)} />

@@ -26,7 +26,7 @@ const DamageRowActions = ({ damage }: { damage: Damage }) => {
 };
 
 const columns: ColumnDef<Damage>[] = [
-  { header: '№', accessorKey: 'id', size: 90 },
+  { id: 'rowNumber', header: '№ п/п', cell: ({ row }) => row.index + 1, size: 70 },
   { header: 'Адрес', accessorKey: 'address' },
   { header: 'ОТ/ГВС', accessorKey: 'networkType' },
   { header: 'Дата обнаружения', accessorKey: 'detectedAt' },

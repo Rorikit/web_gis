@@ -1,4 +1,5 @@
 import type { GisPoint } from '@/entities/gis-point/types';
+import type { Photo } from '@/entities/photo/types';
 import type { AreaState, ContractorType, OrderKind } from '@/entities/damage/types';
 
 export type Order = {
@@ -6,17 +7,25 @@ export type Order = {
   districtId: string;
   orderNumber: string;
   address: string;
-  orderKind: OrderKind;
-  openedAt: string;
-  validUntil: string;
+  orderKind: OrderKind | null;
+  openedAt: string | null;
+  validUntil: string | null;
   closedAt: string | null;
+  greenZoneArea: number;
+  asphaltArea: number;
+  improvementMain: boolean;
+  improvementInnerRoad: boolean;
+  improvementSidewalk: boolean;
+  improvementBlindArea: boolean;
+  curbCount: number;
   areaState: AreaState;
   contractorType: ContractorType;
-  contractorName: string;
   contractNumber: string;
+  contractorRequestDate: string | null;
   plannedFinishDate: string | null;
   note: string;
   gisPoint: GisPoint | null;
+  photos: Photo[];
   archived: boolean;
   createdAt: string;
   updatedAt: string;

@@ -19,13 +19,14 @@ from apps.accounts.permissions import can_access_district, get_user_role, has_an
 from apps.accounts.serializers import serialize_user
 
 from .models import AuditEvent, Damage, GisPoint, OrderKind, Photo
-from .reports import build_current_table_workbook, build_damage_card_document, build_reference_workbook
+from .reports import DAMAGE_CARD_INPUT_FIELDS, build_current_table_workbook, build_damage_card_document, build_reference_workbook
 from .serializers import DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserCreateSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
 from .services import apply_damage_changes, apply_order_changes, create_audit_event, default_damage_payload
 
 ALLOWED_PHOTO_CONTENT_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
 ALLOWED_PHOTO_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
 MAX_PHOTO_SIZE = 10 * 1024 * 1024
+DAMAGE_CARD_FIELD_NAMES = {name for name, _ in DAMAGE_CARD_INPUT_FIELDS}
 
 User = get_user_model()
 
@@ -290,8 +291,12 @@ class OrderDetailView(APIView):
             payload = {
                 key: value
                 for key, value in payload.items()
-                if key in {'contractorName', 'contractNumber', 'plannedFinishDate', 'note'}
+                if key in {'contractorType', 'contractNumber', 'plannedFinishDate', 'note'}
             }
+
+        # Ордер с проставленной датой закрытия уезжает в архив и наоборот (ТЗ, раздел В).
+        if 'closedAt' in payload:
+            payload['archived'] = payload['closedAt'] is not None
 
         damage = apply_order_changes(damage, payload, request.user)
         damage = get_damage_or_404(damage.id)
@@ -583,8 +588,15 @@ class DamageCardReportView(APIView):
         if not can_access_district(request.user, damage.district_id):
             return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
 
+        raw_fields = request.data.get('fields')
+        fields = {
+            key: value
+            for key, value in raw_fields.items()
+            if isinstance(key, str) and key in DAMAGE_CARD_FIELD_NAMES
+        } if isinstance(raw_fields, dict) else {}
+
         additional_info = str(request.data.get('additionalInfo') or '')
-        content = build_damage_card_document(damage, additional_info)
+        content = build_damage_card_document(damage, fields, additional_info)
 
         response = HttpResponse(
             content,
@@ -622,6 +634,8 @@ class ExportCurrentTableView(APIView):
             return denied
 
         queryset = base_damage_queryset().filter(archived=archived)
+        if entity_type == 'orders':
+            queryset = queryset.filter(order_opened_at__isnull=False)
         queryset = filter_by_district_access(queryset, request.user)
 
         content = build_current_table_workbook(queryset, entity_type)
