@@ -274,7 +274,7 @@ def build_current_table_workbook(items, entity_type: str) -> bytes:
                 str(item.contractor_request_date) if item.contractor_request_date else '',
                 str(item.planned_finish_date) if item.planned_finish_date else '',
                 item.note,
-                f'{item.photos.count()} фото',
+                f'{len(item.photos.all())} фото',
                 f'{point.latitude}, {point.longitude}' if point else '',
             ])
     else:
@@ -321,7 +321,7 @@ def build_current_table_workbook(items, entity_type: str) -> bytes:
                 str(item.planned_finish_date) if item.planned_finish_date else '',
                 item.note,
                 str(item.order_closed_at) if item.order_closed_at else '',
-                f'{item.photos.count()} фото',
+                f'{len(item.photos.all())} фото',
                 f'{point.latitude}, {point.longitude}' if point else '',
             ])
 
