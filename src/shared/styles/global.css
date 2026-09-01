@@ -67,8 +67,11 @@ a { color: inherit; text-decoration: none; }
 .data-table th { position: sticky; top: 0; z-index: 3; height: 36px; padding: 0 8px; text-align: left; background: #e2e8f0; border-bottom: 1px solid var(--color-border); font-weight: 700; }
 .data-table td { height: 36px; padding: 0 8px; border-bottom: 1px solid #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .data-table tbody tr:nth-child(even) td { background: #f8fafc; }
-.data-table .is-sticky-left { position: sticky; left: 0; z-index: 2; background: #334155; color: #fff; }
-.data-table .is-sticky-right { position: sticky; right: 0; z-index: 2; background: #334155; color: #fff; }
+.data-table .is-sticky-left { position: sticky; left: 0; z-index: 2; }
+.data-table .is-sticky-right { position: sticky; right: 0; z-index: 2; }
+/* Непрозрачный фон закрепленных колонок должен перебивать чередование строк выше. */
+.data-table th.is-sticky-left, .data-table th.is-sticky-right,
+.data-table tbody tr td.is-sticky-left, .data-table tbody tr td.is-sticky-right { background: #334155; color: #fff; }
 .data-table__details td { height: auto; padding: 12px; background: #f1f5f9 !important; white-space: normal; }
 
 .tabs__list { display: flex; gap: 4px; border-bottom: 1px solid var(--color-border); margin-bottom: 12px; }
