@@ -50,7 +50,9 @@ export const CreateUserDrawer = ({ open, onClose }: { open: boolean; onClose: ()
     <Drawer open={open} title="Новый пользователь" onClose={onClose}>
       <form onSubmit={handleSubmit(submit)} style={{ padding: 16, display: 'grid', gap: 12 }}>
         <FormField label="LDAP login"><Input {...register('ldapLogin', { required: true })} /></FormField>
-        <FormField label="Пароль"><Input type="password" {...register('password', { required: true })} /></FormField>
+        <FormField label="Пароль" hint="Допускается простой или пустой пароль. Пустое поле — вход без пароля.">
+          <Input type="password" autoComplete="new-password" {...register('password')} />
+        </FormField>
         <FormField label="ФИО"><Input {...register('fullName')} /></FormField>
         <FormField label="Роль">
           <Select {...register('role')}>

@@ -1,9 +1,7 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.db.models import QuerySet
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -449,11 +447,6 @@ class UsersListView(APIView):
         if User.objects.filter(username=ldap_login).exists():
             return Response({'detail': 'Пользователь с таким логином уже существует'}, status=status.HTTP_409_CONFLICT)
 
-        try:
-            validate_password(payload['password'])
-        except DjangoValidationError as error:
-            return Response({'detail': ' '.join(error.messages)}, status=status.HTTP_400_BAD_REQUEST)
-
         district = None
         district_id = payload.get('districtId') or None
         if district_id:
@@ -461,6 +454,7 @@ class UsersListView(APIView):
             if district is None:
                 return Response({'detail': 'Район не найден'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Пароль сохраняется как задал администратор: простой и пустой пароли допустимы.
         user = User.objects.create_user(
             username=ldap_login,
             password=payload['password'],
@@ -486,6 +480,12 @@ class UsersListView(APIView):
         return Response(serialize_user(user), status=status.HTTP_201_CREATED)
 
 
+def is_last_active_admin(user) -> bool:
+    if user.profile.role != UserRole.ADMIN or not user.is_active:
+        return False
+    return User.objects.filter(profile__role=UserRole.ADMIN, is_active=True).count() <= 1
+
+
 class UserUpdateView(APIView):
     def put(self, request, user_id: str):
         denied = require_permission(request, 'users.update')
@@ -500,10 +500,8 @@ class UserUpdateView(APIView):
         if user.id == request.user.id and payload.get('isActive') is False:
             return Response({'detail': 'Нельзя заблокировать самого себя'}, status=status.HTTP_409_CONFLICT)
 
-        if user.profile.role == UserRole.ADMIN and payload.get('role') and payload['role'] != UserRole.ADMIN:
-            active_admins = User.objects.filter(profile__role=UserRole.ADMIN, is_active=True).count()
-            if active_admins <= 1:
-                return Response({'detail': 'Нельзя снять права последнего администратора'}, status=status.HTTP_409_CONFLICT)
+        if payload.get('role') and payload['role'] != UserRole.ADMIN and is_last_active_admin(user):
+            return Response({'detail': 'Нельзя снять права последнего администратора'}, status=status.HTTP_409_CONFLICT)
 
         changes: list[tuple[str, str, str]] = []
 
@@ -517,7 +515,19 @@ class UserUpdateView(APIView):
             user.is_active = payload['isActive']
             changes.append(('isActive', old_value, str(user.is_active)))
 
-        user.save(update_fields=['username', 'is_active'])
+        update_fields = ['username', 'is_active']
+        password_changed = 'password' in payload
+        if password_changed:
+            user.set_password(payload['password'])
+            update_fields.append('password')
+            # значения пароля в журнал не пишем
+            changes.append(('password', '', 'изменен'))
+
+        user.save(update_fields=update_fields)
+
+        if password_changed and user.id == request.user.id:
+            # иначе смена собственного пароля разлогинит администратора
+            update_session_auth_hash(request, user)
 
         profile = user.profile
         if 'fullName' in payload and payload['fullName'] != profile.full_name:
@@ -558,6 +568,32 @@ class UserUpdateView(APIView):
             )
 
         return Response(serialize_user(user), status=status.HTTP_200_OK)
+
+    def delete(self, request, user_id: str):
+        denied = require_permission(request, 'users.delete')
+        if denied:
+            return denied
+
+        user = get_object_or_404(User.objects.select_related('profile'), pk=user_id)
+
+        if user.id == request.user.id:
+            return Response({'detail': 'Нельзя удалить самого себя'}, status=status.HTTP_409_CONFLICT)
+
+        if is_last_active_admin(user):
+            return Response({'detail': 'Нельзя удалить последнего администратора'}, status=status.HTTP_409_CONFLICT)
+
+        username = user.username
+        user.delete()
+
+        create_audit_event(
+            entity_type='user',
+            entity_id=str(user_id),
+            user=request.user,
+            field_name='__deleted__',
+            old_value=username,
+            new_value='',
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AuditHistoryView(APIView):

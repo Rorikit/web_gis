@@ -51,3 +51,14 @@ class AuthApiTests(APITestCase):
         me_response = self.client.get(reverse('auth-me'))
         self.assertEqual(me_response.status_code, status.HTTP_200_OK)
         self.assertIsNone(me_response.json())
+
+
+class DistrictSeedTests(APITestCase):
+    def test_districts_match_user_form_list(self):
+        from .models import District
+
+        names = set(District.objects.values_list('name', flat=True))
+        self.assertEqual(
+            names,
+            {'Советский район', 'Московский район', 'Октябрьский район', 'Железнодорожный район', '1-й район', '2-й район'},
+        )

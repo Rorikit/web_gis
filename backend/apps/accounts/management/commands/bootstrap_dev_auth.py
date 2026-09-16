@@ -15,7 +15,8 @@ class Command(BaseCommand):
             ('moskovsky', 'Московский район'),
             ('oktyabrsky', 'Октябрьский район'),
             ('zheleznodorozhny', 'Железнодорожный район'),
-            ('solotcha', 'Солотча'),
+            ('district_1', '1-й район'),
+            ('district_2', '2-й район'),
         ]
 
         for district_id, district_name in districts:

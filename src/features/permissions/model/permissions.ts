@@ -10,6 +10,7 @@ export type Permission =
   | 'users.read'
   | 'users.create'
   | 'users.update'
+  | 'users.delete'
   | 'reports.createReference'
   | 'reports.createDamageCard';
 
@@ -23,6 +24,7 @@ export const permissionMatrix: Record<Permission, UserRole[]> = {
   'users.read': ['admin'],
   'users.create': ['admin'],
   'users.update': ['admin'],
+  'users.delete': ['admin'],
   'reports.createReference': ['oopppr', 'full_access', 'admin'],
   'reports.createDamageCard': ['district_damage', 'district_order', 'full_access', 'admin'],
 };

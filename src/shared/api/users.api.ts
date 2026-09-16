@@ -12,6 +12,9 @@ export type CreateUserPayload = {
   isActive: boolean;
 };
 
+/** `password` передается только при смене пароля; пустая строка — пустой пароль. */
+export type UpdateUserPayload = Partial<Omit<User, 'id' | 'lastLoginAt'>> & { password?: string };
+
 export const usersApi = {
   async list(): Promise<User[]> {
     try {
@@ -36,13 +39,24 @@ export const usersApi = {
       return mockStore.createUser(payload);
     }
   },
-  async update(id: string, payload: Partial<User>): Promise<User> {
+  async update(id: string, payload: UpdateUserPayload): Promise<User> {
     try {
       const { data } = await httpClient.put<User>(`/users/${id}`, payload);
       return data;
     } catch (error) {
       if (!shouldUseMockFallback(error, 'users')) throw error;
-      return mockStore.updateUser(id, payload);
+      // в мок-хранилище паролей нет
+      const rest = { ...payload };
+      delete rest.password;
+      return mockStore.updateUser(id, rest);
+    }
+  },
+  async remove(id: string): Promise<void> {
+    try {
+      await httpClient.delete(`/users/${id}`);
+    } catch (error) {
+      if (!shouldUseMockFallback(error, 'users')) throw error;
+      await mockStore.deleteUser(id);
     }
   },
 };

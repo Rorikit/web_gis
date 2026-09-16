@@ -17,7 +17,7 @@ export const AuthPage = () => {
       <p>Авторизация через LDAP</p>
       <div style={{ display: 'grid', gap: 12 }}>
         <FormField label="LDAP логин"><Input {...register('ldapLogin', { required: true })} /></FormField>
-        <FormField label="Пароль"><Input type="password" {...register('password', { required: true })} /></FormField>
+        <FormField label="Пароль"><Input type="password" {...register('password')} /></FormField>
         {login.isError && <div className="state state--error" style={{ minHeight: 40 }}>Ошибка LDAP, нет роли или пользователь заблокирован</div>}
         <Button type="submit" disabled={login.isPending}>Войти</Button>
       </div>

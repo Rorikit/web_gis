@@ -8,7 +8,8 @@ User = get_user_model()
 
 class LoginSerializer(serializers.Serializer):
     ldapLogin = serializers.CharField(max_length=150)
-    password = serializers.CharField(max_length=128)
+    # Администратор может задать пользователю пустой пароль — такой вход тоже допустим.
+    password = serializers.CharField(max_length=128, allow_blank=True, trim_whitespace=False)
 
 
 class UserResponseSerializer(serializers.Serializer):

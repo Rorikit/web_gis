@@ -62,11 +62,13 @@ class UserWriteSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=UserRole.choices, required=False)
     districtId = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     isActive = serializers.BooleanField(required=False)
+    # Передан ключ — пароль меняется (в т.ч. на пустой); ключа нет — пароль не трогаем.
+    password = serializers.CharField(required=False, allow_blank=True, trim_whitespace=False, max_length=128)
 
 
 class UserCreateSerializer(serializers.Serializer):
     ldapLogin = serializers.CharField(max_length=150)
-    password = serializers.CharField(max_length=128)
+    password = serializers.CharField(max_length=128, allow_blank=True, trim_whitespace=False)
     fullName = serializers.CharField(required=False, allow_blank=True, max_length=255, default='')
     role = serializers.ChoiceField(choices=UserRole.choices)
     districtId = serializers.CharField(required=False, allow_blank=True, allow_null=True)

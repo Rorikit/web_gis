@@ -276,15 +276,101 @@ class IncidentsApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
-    def test_users_create_weak_password_rejected(self):
+    def test_users_create_weak_password_allowed(self):
         self.client.login(username='admin', password='admin')
         response = self.client.post(
             '/users',
             {'ldapLogin': 'weakuser', 'password': '123', 'role': UserRole.DISTRICT_DAMAGE},
             format='json',
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(User.objects.filter(username='weakuser').exists())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.get(username='weakuser').check_password('123'))
+
+    def test_users_create_with_empty_password_can_log_in(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.post(
+            '/users',
+            {'ldapLogin': 'nopass', 'password': '', 'role': UserRole.DISTRICT_DAMAGE, 'districtId': self.central.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.client.logout()
+        login = self.client.post('/auth/ldap/login', {'ldapLogin': 'nopass', 'password': ''}, format='json')
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+        self.assertEqual(login.json()['ldapLogin'], 'nopass')
+
+        wrong = self.client.post('/auth/ldap/login', {'ldapLogin': 'nopass', 'password': 'x'}, format='json')
+        self.assertEqual(wrong.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_users_update_changes_password(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.put(f'/users/{self.damage_user.id}', {'password': '1'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.damage_user.refresh_from_db()
+        self.assertTrue(self.damage_user.check_password('1'))
+        self.assertFalse(self.damage_user.check_password('ivanov'))
+
+        audit = self.client.get(f'/audit/user/{self.damage_user.id}').json()
+        password_events = [item for item in audit if item['fieldName'] == 'password']
+        self.assertEqual(len(password_events), 1)
+        self.assertNotIn('1', password_events[0]['newValue'])
+
+    def test_users_update_can_set_empty_password(self):
+        self.client.login(username='admin', password='admin')
+        self.client.put(f'/users/{self.damage_user.id}', {'password': ''}, format='json')
+
+        self.damage_user.refresh_from_db()
+        self.assertTrue(self.damage_user.check_password(''))
+
+    def test_users_update_without_password_keeps_it(self):
+        self.client.login(username='admin', password='admin')
+        self.client.put(f'/users/{self.damage_user.id}', {'fullName': 'Иванов И.И.'}, format='json')
+
+        self.damage_user.refresh_from_db()
+        self.assertTrue(self.damage_user.check_password('ivanov'))
+
+    def test_users_update_own_password_keeps_session(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.put(f'/users/{self.admin.id}', {'password': 'new'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        still_logged_in = self.client.get('/users')
+        self.assertEqual(still_logged_in.status_code, status.HTTP_200_OK)
+
+    def test_users_delete_success(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.delete(f'/users/{self.order_user.id}')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=self.order_user.pk).exists())
+
+        audit = self.client.get(f'/audit/user/{self.order_user.id}').json()
+        self.assertTrue(any(item['fieldName'] == '__deleted__' and item['oldValue'] == 'sidorov' for item in audit))
+
+    def test_users_delete_self_forbidden(self):
+        self.client.login(username='admin', password='admin')
+        response = self.client.delete(f'/users/{self.admin.id}')
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())
+
+    def test_users_delete_admin_only(self):
+        self.client.login(username='ivanov', password='ivanov')
+        response = self.client.delete(f'/users/{self.order_user.id}')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(User.objects.filter(pk=self.order_user.pk).exists())
+
+    def test_users_delete_keeps_their_audit_trail(self):
+        self.client.login(username='ivanov', password='ivanov')
+        self.client.put(f'/damages/{self.damage_central.id}', {'note': 'от Иванова'}, format='json')
+        self.client.logout()
+
+        self.client.login(username='admin', password='admin')
+        response = self.client.delete(f'/users/{self.damage_user.id}')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        history = self.client.get(f'/audit/damage/{self.damage_central.id}').json()
+        self.assertTrue(any(item['newValue'] == 'от Иванова' and item['userName'] == 'Иванов' for item in history))
 
     def test_export_current_table_damages(self):
         self.client.login(username='admin', password='admin')

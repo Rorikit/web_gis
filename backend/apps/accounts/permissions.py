@@ -17,6 +17,7 @@ PERMISSION_MATRIX: dict[PermissionName, set[str]] = {
     'users.read': {UserRole.ADMIN},
     'users.create': {UserRole.ADMIN},
     'users.update': {UserRole.ADMIN},
+    'users.delete': {UserRole.ADMIN},
     'reports.createReference': {UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
     'reports.createDamageCard': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
 }

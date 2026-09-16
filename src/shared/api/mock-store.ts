@@ -105,4 +105,8 @@ export const mockStore = {
     users = users.map((item) => (item.id === id ? { ...item, ...payload } : item));
     return users.find((item) => item.id === id)!;
   },
+  async deleteUser(id: string) {
+    await wait();
+    users = users.filter((item) => item.id !== id);
+  },
 };
