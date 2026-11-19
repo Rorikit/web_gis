@@ -18,7 +18,7 @@ from apps.accounts.serializers import serialize_user
 
 from .models import AuditEvent, Damage, GisPoint, OrderKind, Photo
 from .reports import DAMAGE_CARD_INPUT_FIELDS, build_current_table_workbook, build_damage_card_document, build_reference_workbook
-from .serializers import DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserCreateSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
+from .serializers import DamageOpenOrderSerializer, DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserCreateSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
 from .services import apply_damage_changes, apply_order_changes, create_audit_event, default_damage_payload
 
 ALLOWED_PHOTO_CONTENT_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
@@ -233,11 +233,17 @@ class DamageOpenOrderView(APIView):
         if damage.order_opened_at is not None:
             return Response({'detail': 'Ордер уже открыт'}, status=status.HTTP_400_BAD_REQUEST)
 
+        serializer = DamageOpenOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
         today = timezone.localdate()
+        order_opened_at = data.get('orderOpenedAt') or today
         payload = {
-            'orderNumber': f'ORD-{today:%Y%m%d}-{damage.id.rsplit("-", 1)[-1]}',
-            'orderOpenedAt': today,
-            'orderValidUntil': today + timedelta(days=30),
+            # Номер ордера вводит пользователь; бэкенд не генерирует его сам.
+            'orderNumber': (data.get('orderNumber') or '').strip(),
+            'orderOpenedAt': order_opened_at,
+            'orderValidUntil': data.get('orderValidUntil') or order_opened_at + timedelta(days=30),
             'orderKind': OrderKind.CURRENT,
         }
 

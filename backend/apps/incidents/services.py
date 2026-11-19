@@ -41,6 +41,7 @@ DAMAGE_FIELD_MAP = {
 }
 
 ORDER_FIELD_MAP = {
+    'orderNumber': 'order_number',
     'address': 'address',
     'orderKind': 'order_kind',
     'openedAt': 'order_opened_at',

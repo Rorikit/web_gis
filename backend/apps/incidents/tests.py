@@ -116,13 +116,17 @@ class IncidentsApiTests(APITestCase):
         self.assertNotIn(self.damage_without_order.id, ids)
         self.assertIn(self.damage_central.id, ids)
 
-    def test_open_order_creates_order_fields_and_surfaces_in_orders_list(self):
+    def test_open_order_uses_provided_number_and_surfaces_in_orders_list(self):
         self.client.login(username='ivanov', password='ivanov')
 
-        response = self.client.post(f'/damages/{self.damage_without_order.id}/open-order')
+        response = self.client.post(
+            f'/damages/{self.damage_without_order.id}/open-order',
+            {'orderNumber': '  ОР-2026-0500  '},
+            format='json',
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         body = response.json()
-        self.assertTrue(body['orderNumber'])
+        self.assertEqual(body['orderNumber'], 'ОР-2026-0500')
         self.assertIsNotNone(body['orderOpenedAt'])
         self.assertEqual(body['orderKind'], OrderKind.CURRENT)
 
@@ -133,6 +137,42 @@ class IncidentsApiTests(APITestCase):
         # opening twice is rejected
         again = self.client.post(f'/damages/{self.damage_without_order.id}/open-order')
         self.assertEqual(again.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_open_order_without_number_keeps_number_blank(self):
+        self.client.login(username='ivanov', password='ivanov')
+
+        response = self.client.post(f'/damages/{self.damage_without_order.id}/open-order')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertEqual(body['orderNumber'], '')
+        self.assertIsNotNone(body['orderOpenedAt'])
+
+    def test_order_number_can_be_edited_after_opening(self):
+        self.client.login(username='ivanov', password='ivanov')
+
+        response = self.client.put(
+            f'/orders/{self.damage_central.id}',
+            {'orderNumber': 'ОР-2026-9999'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['orderNumber'], 'ОР-2026-9999')
+
+        detail = self.client.get(f'/damages/{self.damage_central.id}')
+        self.assertEqual(detail.json()['orderNumber'], 'ОР-2026-9999')
+
+    def test_damage_can_be_created_without_order(self):
+        self.client.login(username='ivanov', password='ivanov')
+
+        response = self.client.post('/damages', {'address': 'ул. Новая, 1'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        body = response.json()
+        self.assertEqual(body['orderNumber'], '')
+        self.assertIsNone(body['orderOpenedAt'])
+
+        orders_response = self.client.get('/orders', {'archived': 'false'})
+        ids = [item['id'] for item in orders_response.json()]
+        self.assertNotIn(body['id'], ids)
 
     def test_damage_list_filtered_by_district(self):
         self.client.login(username='ivanov', password='ivanov')

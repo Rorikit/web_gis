@@ -30,14 +30,42 @@ const schema = z.object({
   improvementInnerRoad: z.boolean(),
   improvementSidewalk: z.boolean(),
   improvementBlindArea: z.boolean(),
+  orderNumber: z.string(),
+  orderOpenedAt: z.string(),
+  orderValidUntil: z.string(),
+  orderClosedAt: z.string(),
 });
 
 type DamageForm = z.infer<typeof schema>;
+
+const toFormValues = (damage: Damage): DamageForm => ({
+  address: damage.address,
+  networkType: damage.networkType,
+  damageType: damage.damageType,
+  detectedAt: damage.detectedAt,
+  fixedAt: damage.fixedAt ?? '',
+  heatSource: damage.heatSource,
+  disconnectedAddresses: damage.disconnectedAddresses,
+  damageDescription: damage.damageDescription,
+  note: damage.note,
+  greenZoneArea: damage.greenZoneArea,
+  asphaltArea: damage.asphaltArea,
+  curbCount: damage.curbCount,
+  improvementMain: damage.improvementMain,
+  improvementInnerRoad: damage.improvementInnerRoad,
+  improvementSidewalk: damage.improvementSidewalk,
+  improvementBlindArea: damage.improvementBlindArea,
+  orderNumber: damage.orderNumber,
+  orderOpenedAt: damage.orderOpenedAt ?? '',
+  orderValidUntil: damage.orderValidUntil ?? '',
+  orderClosedAt: damage.orderClosedAt ?? '',
+});
 
 export const DamageCard = ({ damage }: { damage: Damage }) => {
   const [tab, setTab] = useState('main');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [orderNumberDraft, setOrderNumberDraft] = useState('');
   const navigate = useNavigate();
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const { data: user } = useCurrentUser();
@@ -47,31 +75,23 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
   const openOrder = useOpenDamageOrder(damage.id);
   const canEditMain = hasPermission(user?.role, 'damage.update');
   const { register, handleSubmit, reset } = useForm<DamageForm>({
-    defaultValues: {
-      address: damage.address,
-      networkType: damage.networkType,
-      damageType: damage.damageType,
-      detectedAt: damage.detectedAt,
-      fixedAt: damage.fixedAt ?? '',
-      heatSource: damage.heatSource,
-      disconnectedAddresses: damage.disconnectedAddresses,
-      damageDescription: damage.damageDescription,
-      note: damage.note,
-      greenZoneArea: damage.greenZoneArea,
-      asphaltArea: damage.asphaltArea,
-      curbCount: damage.curbCount,
-      improvementMain: damage.improvementMain,
-      improvementInnerRoad: damage.improvementInnerRoad,
-      improvementSidewalk: damage.improvementSidewalk,
-      improvementBlindArea: damage.improvementBlindArea,
-    },
+    defaultValues: toFormValues(damage),
   });
 
   const disabled = !canEditMain || update.isPending;
   const onSubmit = (values: DamageForm) => {
     const result = schema.safeParse(values);
     if (result.success) {
-      update.mutate({ ...result.data, fixedAt: result.data.fixedAt || null }, { onSuccess: () => navigate('/damages') });
+      const { orderNumber, orderOpenedAt, orderValidUntil, orderClosedAt, ...mainFields } = result.data;
+      const orderFields = damage.orderOpenedAt
+        ? {
+            orderNumber,
+            orderOpenedAt: orderOpenedAt || null,
+            orderValidUntil: orderValidUntil || null,
+            orderClosedAt: orderClosedAt || null,
+          }
+        : {};
+      update.mutate({ ...mainFields, ...orderFields, fixedAt: mainFields.fixedAt || null }, { onSuccess: () => navigate('/damages') });
     }
   };
 
@@ -108,23 +128,47 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
         id: 'order',
         label: 'Ордер',
         content: damage.orderOpenedAt ? (
-          <div className="details-grid">
-            <div className="details-item"><span>№ ордера</span>{damage.orderNumber}</div>
-            <div className="details-item"><span>Открыт</span>{damage.orderOpenedAt}</div>
-            <div className="details-item"><span>Действует до</span>{damage.orderValidUntil}</div>
-            <div className="details-item"><span>Закрыт</span>{damage.orderClosedAt ?? '-'}</div>
-            <Button type="button" variant="secondary"><Link to={`/orders/${damage.id}`}>Перейти к ордеру</Link></Button>
+          <div className="form-grid">
+            <FormField label="№ ордера"><Input disabled={disabled} {...register('orderNumber')} /></FormField>
+            <FormField label="Дата открытия ордера"><Input type="date" disabled={disabled} {...register('orderOpenedAt')} /></FormField>
+            <FormField label="Ордер действует до"><Input type="date" disabled={disabled} {...register('orderValidUntil')} /></FormField>
+            <FormField label="Дата закрытия ордера"><Input type="date" disabled={disabled} {...register('orderClosedAt')} /></FormField>
+            <div className="details-item" style={{ gridColumn: '1 / -1' }}>
+              <span>Перейти к ордеру</span><Link to={`/orders/${damage.id}`}>Открыть карточку ордера</Link>
+            </div>
           </div>
         ) : (
-          <div className="details-grid">
-            <div className="details-item"><span>Статус</span>Ордер не открыт</div>
-            <Button
-              type="button"
-              disabled={!canEditMain || openOrder.isPending}
-              onClick={() => openOrder.mutate()}
-            >
-              {openOrder.isPending ? 'Открытие…' : 'Открыть ордер'}
-            </Button>
+          <div className="form-grid">
+            <FormField label="№ ордера (можно заполнить позже)">
+              <Input
+                value={orderNumberDraft}
+                disabled={!canEditMain || openOrder.isPending}
+                placeholder="Введите номер ордера"
+                onChange={(event) => setOrderNumberDraft(event.target.value)}
+              />
+            </FormField>
+            <div className="details-item" style={{ gridColumn: '1 / -1' }}>
+              <span>Статус</span>Ордер не открыт — повреждение может существовать без ордера
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <Button
+                type="button"
+                disabled={!canEditMain || openOrder.isPending}
+                onClick={() =>
+                  openOrder.mutate(
+                    { orderNumber: orderNumberDraft.trim() },
+                    {
+                      onSuccess: (updated) => {
+                        reset(toFormValues(updated));
+                        setOrderNumberDraft('');
+                      },
+                    },
+                  )
+                }
+              >
+                {openOrder.isPending ? 'Открытие…' : 'Открыть ордер'}
+              </Button>
+            </div>
           </div>
         ),
       },
@@ -180,7 +224,7 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
       },
       { id: 'history', label: 'История', content: <AuditHistoryTable entityType="damage" entityId={damage.id} /> },
     ],
-    [damage, disabled, register, canEditMain, uploadPhoto, openOrder],
+    [damage, disabled, register, canEditMain, uploadPhoto, openOrder, orderNumberDraft, reset],
   );
 
   return (

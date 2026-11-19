@@ -42,7 +42,14 @@ class DamageWriteSerializer(serializers.Serializer):
     archived = serializers.BooleanField(required=False)
 
 
+class DamageOpenOrderSerializer(serializers.Serializer):
+    orderNumber = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    orderOpenedAt = serializers.DateField(required=False, allow_null=True)
+    orderValidUntil = serializers.DateField(required=False, allow_null=True)
+
+
 class OrderWriteSerializer(serializers.Serializer):
+    orderNumber = serializers.CharField(required=False, allow_blank=True, max_length=64)
     address = serializers.CharField(required=False, allow_blank=True)
     orderKind = serializers.ChoiceField(choices=OrderKind.choices, required=False, allow_null=True)
     openedAt = serializers.DateField(required=False, allow_null=True)

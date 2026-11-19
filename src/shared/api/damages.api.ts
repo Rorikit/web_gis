@@ -75,8 +75,8 @@ export const damagesApi = {
       return mockStore.archiveDamage(id);
     }
   },
-  async openOrder(id: string): Promise<Damage> {
-    const { data } = await httpClient.post<unknown>(endpoints.damages.openOrder(id));
+  async openOrder(id: string, payload?: { orderNumber?: string }): Promise<Damage> {
+    const { data } = await httpClient.post<unknown>(endpoints.damages.openOrder(id), payload ?? {});
     if (isRecord(data) && typeof data.id === 'string') return data as Damage;
     throw new Error('Backend returned invalid payload for POST /damages/{id}/open-order');
   },

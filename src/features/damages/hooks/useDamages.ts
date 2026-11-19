@@ -53,7 +53,7 @@ export const useOpenDamageOrder = (id: string) => {
   const queryClient = useQueryClient();
   const push = useToastStore((state) => state.push);
   return useMutation({
-    mutationFn: () => damagesApi.openOrder(id),
+    mutationFn: (payload: { orderNumber?: string } = {}) => damagesApi.openOrder(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['damages'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });

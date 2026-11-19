@@ -14,7 +14,7 @@ export const OrderDetailsPage = () => {
   if (!canAccessDistrict(user?.role, user?.districtId, query.data.districtId)) return <Navigate to="/access-denied" replace />;
   return (
     <>
-      <PageHeader title={`Ордер ${query.data.orderNumber}`} subtitle={query.data.address} />
+      <PageHeader title={`Ордер ${query.data.orderNumber || 'без номера'}`} subtitle={query.data.address} />
       <OrderCard order={query.data} />
     </>
   );

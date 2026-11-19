@@ -12,6 +12,7 @@ import { hasPermission } from '@/features/permissions/model/permissions';
 import { Button, FormField, Input, Select, Tabs, Textarea } from '@/shared/ui';
 
 const schema = z.object({
+  orderNumber: z.string(),
   address: z.string(),
   orderKind: z.enum(['Текущий', 'Гарантийный']),
   openedAt: z.string(),
@@ -39,6 +40,7 @@ export const OrderCard = ({ order }: { order: Order }) => {
   const canEditOopppr = hasPermission(user?.role, 'ooppprFields.update');
   const { register, handleSubmit } = useForm<OrderForm>({
     defaultValues: {
+      orderNumber: order.orderNumber,
       address: order.address,
       orderKind: order.orderKind ?? 'Текущий',
       openedAt: order.openedAt ?? '',
@@ -71,7 +73,7 @@ export const OrderCard = ({ order }: { order: Order }) => {
       label: 'Данные ордера',
       content: (
         <div className="form-grid">
-          <FormField label="№ ордера"><Input disabled defaultValue={order.orderNumber} /></FormField>
+          <FormField label="№ ордера"><Input disabled={!canEditOrder} {...register('orderNumber')} /></FormField>
           <FormField label="Адрес"><Input disabled={!canEditOrder} {...register('address')} /></FormField>
           <FormField label="Тип ордера">
             <Select disabled={!canEditOrder} {...register('orderKind')}>
