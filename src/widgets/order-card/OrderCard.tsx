@@ -19,11 +19,16 @@ const schema = z.object({
   validUntil: z.string(),
   closedAt: z.string(),
   areaState: z.enum(['В РАБОТЕ', 'ГОТОВ К ЗАКРЫТИЮ']),
-  contractorType: z.enum(['Подрядчик', 'УРТС', 'Участок']),
+  contractorType: z.string(),
   contractNumber: z.string(),
   contractorRequestDate: z.string(),
-  plannedFinishDate: z.string(),
   note: z.string(),
+  greenZoneArea: z.number(),
+  curbCount: z.number(),
+  improvementMain: z.number(),
+  improvementInnerRoad: z.number(),
+  improvementSidewalk: z.number(),
+  improvementBlindArea: z.number(),
 });
 
 type OrderForm = z.infer<typeof schema>;
@@ -50,20 +55,26 @@ export const OrderCard = ({ order }: { order: Order }) => {
       contractorType: order.contractorType,
       contractNumber: order.contractNumber,
       contractorRequestDate: order.contractorRequestDate ?? '',
-      plannedFinishDate: order.plannedFinishDate ?? '',
       note: order.note,
+      greenZoneArea: order.greenZoneArea,
+      curbCount: order.curbCount,
+      improvementMain: order.improvementMain,
+      improvementInnerRoad: order.improvementInnerRoad,
+      improvementSidewalk: order.improvementSidewalk,
+      improvementBlindArea: order.improvementBlindArea,
     },
   });
 
   const onSubmit = (values: OrderForm) => {
-    const parsed = schema.parse(values);
+    const result = schema.safeParse(values);
+    if (!result.success) return;
+    const parsed = result.data;
     update.mutate({
       ...parsed,
       openedAt: emptyToNull(parsed.openedAt),
       validUntil: emptyToNull(parsed.validUntil),
       closedAt: emptyToNull(parsed.closedAt),
       contractorRequestDate: emptyToNull(parsed.contractorRequestDate),
-      plannedFinishDate: emptyToNull(parsed.plannedFinishDate),
     });
   };
 
@@ -94,12 +105,32 @@ export const OrderCard = ({ order }: { order: Order }) => {
       id: 'improvement',
       label: 'Благоустройство',
       content: (
-        <FormField label="Состояние">
-          <Select disabled={!canEditOrder} {...register('areaState')}>
-            <option>В РАБОТЕ</option>
-            <option>ГОТОВ К ЗАКРЫТИЮ</option>
-          </Select>
-        </FormField>
+        <div className="form-grid">
+          <FormField label="Зеленая зона, м²">
+            <Input type="number" disabled={!canEditOrder} {...register('greenZoneArea', { valueAsNumber: true })} />
+          </FormField>
+          <FormField label="Бортовой камень, шт">
+            <Input type="number" disabled={!canEditOrder} {...register('curbCount', { valueAsNumber: true })} />
+          </FormField>
+          <FormField label="Проезжая часть (асфальт), м²">
+            <Input type="number" disabled={!canEditOrder} {...register('improvementMain', { valueAsNumber: true })} />
+          </FormField>
+          <FormField label="Внутриквартальная дорога (асфальт), м²">
+            <Input type="number" disabled={!canEditOrder} {...register('improvementInnerRoad', { valueAsNumber: true })} />
+          </FormField>
+          <FormField label="Тротуар (асфальт), м²">
+            <Input type="number" disabled={!canEditOrder} {...register('improvementSidewalk', { valueAsNumber: true })} />
+          </FormField>
+          <FormField label="Отмостка (асфальт), м²">
+            <Input type="number" disabled={!canEditOrder} {...register('improvementBlindArea', { valueAsNumber: true })} />
+          </FormField>
+          <FormField label="Состояние участка">
+            <Select disabled={!canEditOrder} {...register('areaState')}>
+              <option>В РАБОТЕ</option>
+              <option>ГОТОВ К ЗАКРЫТИЮ</option>
+            </Select>
+          </FormField>
+        </div>
       ),
     },
     {
@@ -108,14 +139,9 @@ export const OrderCard = ({ order }: { order: Order }) => {
       content: (
         <div className="form-grid">
           <FormField label="Исполнитель благоустройства">
-            <Select disabled={!canEditOopppr} {...register('contractorType')}>
-              <option>Подрядчик</option>
-              <option>УРТС</option>
-              <option>Участок</option>
-            </Select>
+            <Input maxLength={512} disabled={!canEditOopppr} {...register('contractorType')} />
           </FormField>
           <FormField label="№ договора"><Input disabled={!canEditOopppr} {...register('contractNumber')} /></FormField>
-          <FormField label="Срок выполнения"><Input type="date" disabled={!canEditOopppr} {...register('plannedFinishDate')} /></FormField>
           <FormField label="Примечание"><Textarea disabled={!canEditOopppr} {...register('note')} /></FormField>
         </div>
       ),

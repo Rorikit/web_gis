@@ -133,9 +133,27 @@ export const DamageCardReportModal = ({ damage, open, onClose }: { damage: Damag
   return (
     <Modal open={open} title="Карта повреждения DOCX" onClose={onClose}>
       <p style={{ marginTop: 0, color: 'var(--color-muted)', fontSize: 13 }}>
-        Пункты 1-4 отчета заполняются из карточки повреждения. Остальные пункты формы заполните ниже —
+        Пункты 1-4 отчета заполняются из карточки повреждения (показаны серым). Остальные пункты формы заполните ниже —
         пустые поля останутся в отчете пустой строкой для заполнения от руки.
       </p>
+
+      <section className="report-prefilled">
+        <h3 className="section-title" style={{ fontSize: 14 }}>Из карточки повреждения</h3>
+        <div className="form-grid">
+          <FormField label="1. Дата обнаружения повреждения">
+            <Input disabled value={damage.detectedAt} />
+          </FormField>
+          <FormField label="2. Источник теплоснабжения">
+            <Input disabled value={damage.heatSource || '-'} />
+          </FormField>
+          <FormField label="3. Признак т/сети">
+            <Input disabled value={damage.networkType} />
+          </FormField>
+          <FormField label="4. Место повреждения (адрес)">
+            <Input disabled value={damage.address} />
+          </FormField>
+        </div>
+      </section>
 
       {sections.map((section) => (
         <section key={section.title} style={{ marginBottom: 16 }}>

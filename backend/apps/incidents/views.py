@@ -16,15 +16,31 @@ from apps.accounts.models import District, UserRole
 from apps.accounts.permissions import can_access_district, get_user_role, has_any_permission, has_permission
 from apps.accounts.serializers import serialize_user
 
-from .models import AuditEvent, Damage, GisPoint, OrderKind, Photo
+from .models import AuditEvent, Damage, GisPoint, OrderKind, Photo, RequestArchive
 from .reports import DAMAGE_CARD_INPUT_FIELDS, build_current_table_workbook, build_damage_card_document, build_reference_workbook
-from .serializers import DamageOpenOrderSerializer, DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, UserCreateSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order
-from .services import apply_damage_changes, apply_order_changes, create_audit_event, default_damage_payload
+from .serializers import DamageOpenOrderSerializer, DamageWriteSerializer, GisPointWriteSerializer, OrderWriteSerializer, RequestArchiveWriteSerializer, UserCreateSerializer, UserWriteSerializer, serialize_audit_event, serialize_damage, serialize_order, serialize_request_archive
+from .services import DAMAGE_FIELD_MAP, ORDER_FIELD_MAP, apply_damage_changes, apply_order_changes, create_audit_event, default_damage_payload
 
 ALLOWED_PHOTO_CONTENT_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
 ALLOWED_PHOTO_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
 MAX_PHOTO_SIZE = 10 * 1024 * 1024
 DAMAGE_CARD_FIELD_NAMES = {name for name, _ in DAMAGE_CARD_INPUT_FIELDS}
+
+# Ключи карточки повреждения -> ключи карточки ордера.
+DAMAGE_ORDER_FIELD_ALIASES = {
+    'orderNumber': 'orderNumber',
+    'orderOpenedAt': 'openedAt',
+    'orderValidUntil': 'validUntil',
+    'orderClosedAt': 'closedAt',
+    'orderKind': 'orderKind',
+    'address': 'address',
+    'greenZoneArea': 'greenZoneArea',
+    'curbCount': 'curbCount',
+    'improvementMain': 'improvementMain',
+    'improvementInnerRoad': 'improvementInnerRoad',
+    'improvementSidewalk': 'improvementSidewalk',
+    'improvementBlindArea': 'improvementBlindArea',
+}
 
 User = get_user_model()
 
@@ -133,7 +149,6 @@ class DamageListCreateView(APIView):
             'damage_description': payload['damageDescription'],
             'order_kind': payload['orderKind'],
             'green_zone_area': payload['greenZoneArea'],
-            'asphalt_area': payload['asphaltArea'],
             'improvement_main': payload['improvementMain'],
             'improvement_inner_road': payload['improvementInnerRoad'],
             'improvement_sidewalk': payload['improvementSidewalk'],
@@ -143,10 +158,10 @@ class DamageListCreateView(APIView):
             'contractor_type': payload['contractorType'],
             'contract_number': payload['contractNumber'],
             'contractor_request_date': payload['contractorRequestDate'],
-            'planned_finish_date': payload['plannedFinishDate'],
             'note': payload['note'],
             'order_closed_at': payload['orderClosedAt'],
-            'archived': payload['archived'],
+            # Заполненная дата устранения сразу отправляет повреждение в архив.
+            'archived': payload['fixedAt'] is not None,
         }
 
         damage = Damage.objects.create(**model_payload)
@@ -175,7 +190,8 @@ class DamageDetailView(APIView):
         return Response(serialize_damage(damage), status=status.HTTP_200_OK)
 
     def put(self, request, damage_id: str):
-        denied = require_permission(request, 'damage.update')
+        # Поля повреждения меняет «Район: повреждения», поля ордера — «Район: ордера».
+        denied = require_any_permission(request, ('damage.update', 'damage.orderFields.update'))
         if denied:
             return denied
 
@@ -187,16 +203,59 @@ class DamageDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         payload = dict(serializer.validated_data)
 
+        can_edit_damage = has_permission(request.user, 'damage.update')
+        can_edit_order = has_permission(request.user, 'damage.orderFields.update')
+
+        allowed = set()
+        if can_edit_damage:
+            allowed |= set(DAMAGE_FIELD_MAP)
+        if can_edit_order:
+            allowed |= set(DAMAGE_ORDER_FIELD_ALIASES)
+        payload = {key: value for key, value in payload.items() if key in allowed}
+
         if 'districtId' in payload:
-            district_id = payload['districtId']
-            district = District.objects.filter(id=district_id).first()
-            if district is None:
-                return Response({'detail': 'Район не найден'}, status=status.HTTP_400_BAD_REQUEST)
+            if not can_edit_damage:
+                payload.pop('districtId')
+            else:
+                district_id = payload['districtId']
+                district = District.objects.filter(id=district_id).first()
+                if district is None:
+                    return Response({'detail': 'Район не найден'}, status=status.HTTP_400_BAD_REQUEST)
 
-            if not can_access_district(request.user, district.id):
-                return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
+                if not can_access_district(request.user, district.id):
+                    return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
 
-        damage = apply_damage_changes(damage, payload, request.user, entity_type='damage')
+        # После заполнения номера ордера адрес правит только роль «Район: ордера».
+        if (
+            'address' in payload
+            and damage.order_number.strip()
+            and not can_edit_order
+            and payload['address'] != damage.address
+        ):
+            return Response(
+                {'detail': 'Адрес после заполнения номера ордера может менять только пользователь с правами района ордеров'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        damage_payload = (
+            {key: value for key, value in payload.items() if key in DAMAGE_FIELD_MAP}
+            if can_edit_damage else {}
+        )
+        order_payload = {}
+        if can_edit_order:
+            for source, target in DAMAGE_ORDER_FIELD_ALIASES.items():
+                if source in payload:
+                    order_payload[target] = payload[source]
+            if can_edit_damage:
+                # Адрес уже применён как поле повреждения.
+                order_payload.pop('address', None)
+
+        if 'fixedAt' in damage_payload:
+            damage_payload['archived'] = damage_payload['fixedAt'] is not None
+
+        damage = apply_damage_changes(damage, damage_payload, request.user, entity_type='damage')
+        if order_payload:
+            damage = apply_order_changes(damage, order_payload, request.user)
         damage = get_damage_or_404(damage.id)
         return Response(serialize_damage(damage), status=status.HTTP_200_OK)
 
@@ -211,18 +270,16 @@ class DamageArchiveView(APIView):
         if not can_access_district(request.user, damage.district_id):
             return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
 
-        payload = {'archived': True}
+        damage = apply_damage_changes(damage, {'archived': True}, request.user, entity_type='damage')
         if damage.order_opened_at is not None and damage.order_closed_at is None:
-            payload['orderClosedAt'] = timezone.localdate()
-
-        damage = apply_damage_changes(damage, payload, request.user, entity_type='damage')
+            damage = apply_order_changes(damage, {'closedAt': timezone.localdate()}, request.user)
         damage = get_damage_or_404(damage.id)
         return Response(serialize_damage(damage), status=status.HTTP_200_OK)
 
 
 class DamageOpenOrderView(APIView):
     def post(self, request, damage_id: str):
-        denied = require_permission(request, 'damage.update')
+        denied = require_permission(request, 'damage.orderFields.update')
         if denied:
             return denied
 
@@ -242,12 +299,12 @@ class DamageOpenOrderView(APIView):
         payload = {
             # Номер ордера вводит пользователь; бэкенд не генерирует его сам.
             'orderNumber': (data.get('orderNumber') or '').strip(),
-            'orderOpenedAt': order_opened_at,
-            'orderValidUntil': data.get('orderValidUntil') or order_opened_at + timedelta(days=30),
+            'openedAt': order_opened_at,
+            'validUntil': data.get('orderValidUntil') or order_opened_at + timedelta(days=30),
             'orderKind': OrderKind.CURRENT,
         }
 
-        damage = apply_damage_changes(damage, payload, request.user, entity_type='damage')
+        damage = apply_order_changes(damage, payload, request.user)
         damage = get_damage_or_404(damage.id)
         return Response(serialize_damage(damage), status=status.HTTP_200_OK)
 
@@ -295,7 +352,7 @@ class OrderDetailView(APIView):
             payload = {
                 key: value
                 for key, value in payload.items()
-                if key in {'contractorType', 'contractNumber', 'plannedFinishDate', 'note'}
+                if key in {'contractorType', 'contractNumber', 'note'}
             }
 
         # Ордер с проставленной датой закрытия уезжает в архив и наоборот (ТЗ, раздел В).
@@ -319,11 +376,86 @@ class OrderArchiveView(APIView):
 
         payload = {'archived': True}
         if damage.order_closed_at is None:
-            payload['orderClosedAt'] = timezone.localdate()
+            payload['closedAt'] = timezone.localdate()
 
-        damage = apply_damage_changes(damage, payload, request.user, entity_type='order')
+        damage = apply_order_changes(damage, payload, request.user)
         damage = get_damage_or_404(damage.id)
         return Response(serialize_order(damage), status=status.HTTP_200_OK)
+
+
+class RequestArchiveListView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request):
+        denied = require_permission(request, 'requests.read')
+        if denied:
+            return denied
+
+        queryset = RequestArchive.objects.select_related('district')
+        role = get_user_role(request.user)
+        if role not in {UserRole.ADMIN, UserRole.FULL_ACCESS}:
+            district_id = getattr(getattr(request.user, 'profile', None), 'district_id', None)
+            queryset = queryset.filter(district_id=district_id) if district_id else queryset.none()
+
+        return Response([serialize_request_archive(item) for item in queryset], status=status.HTTP_200_OK)
+
+    def post(self, request):
+        denied = require_permission(request, 'requests.create')
+        if denied:
+            return denied
+
+        serializer = RequestArchiveWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        payload = serializer.validated_data
+
+        district_id = getattr(getattr(request.user, 'profile', None), 'district_id', None)
+        if not district_id:
+            district_id = District.objects.order_by('id').values_list('id', flat=True).first()
+
+        uploaded_file = request.FILES.get('file')
+        item = RequestArchive.objects.create(
+            district_id=district_id,
+            request_date=payload.get('requestDate') or timezone.localdate(),
+            contractor=payload.get('contractor', ''),
+            addresses=payload.get('addresses', ''),
+            file=uploaded_file or '',
+            file_name=uploaded_file.name if uploaded_file else '',
+            created_by=request.user if request.user.is_authenticated else None,
+        )
+        create_audit_event(
+            entity_type='request',
+            entity_id=item.id,
+            user=request.user,
+            field_name='__created__',
+            old_value='',
+            new_value='created',
+        )
+        return Response(serialize_request_archive(item), status=status.HTTP_201_CREATED)
+
+
+class RequestArchiveDetailView(APIView):
+    def delete(self, request, request_id: str):
+        denied = require_permission(request, 'requests.delete')
+        if denied:
+            return denied
+
+        item = get_object_or_404(RequestArchive.objects.select_related('district'), pk=request_id)
+        role = get_user_role(request.user)
+        if role not in {UserRole.ADMIN, UserRole.FULL_ACCESS}:
+            district_id = getattr(getattr(request.user, 'profile', None), 'district_id', None)
+            if not district_id or item.district_id != district_id:
+                return Response({'detail': 'Недостаточно прав для района'}, status=status.HTTP_403_FORBIDDEN)
+
+        item.delete()
+        create_audit_event(
+            entity_type='request',
+            entity_id=request_id,
+            user=request.user,
+            field_name='__deleted__',
+            old_value='',
+            new_value='',
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class GisOpenOrdersView(APIView):

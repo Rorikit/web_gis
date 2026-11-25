@@ -39,7 +39,10 @@ a { color: inherit; text-decoration: none; }
 .page-header h1 { margin: 0; font-size: 22px; line-height: 1.2; }
 .page-header p { margin: 5px 0 0; color: var(--color-muted); }
 .page-header__actions { display: flex; gap: 8px; }
-.page-toolbar { min-height: var(--toolbar-height); display: flex; align-items: center; gap: 8px; padding: 8px; margin-bottom: 12px; border: 1px solid var(--color-border); background: #fff; border-radius: var(--radius); }
+.page-toolbar { min-height: var(--toolbar-height); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px; margin-bottom: 12px; border: 1px solid var(--color-border); background: #fff; border-radius: var(--radius); }
+.date-range { display: flex; align-items: center; gap: 6px; color: var(--color-muted); font-size: 13px; }
+.date-range .input { width: 150px; }
+.filter-checkbox { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #334155; }
 
 .button { height: 40px; border: 1px solid transparent; border-radius: var(--radius); padding: 0 14px; cursor: pointer; font-weight: 600; }
 .button:disabled { opacity: .55; cursor: not-allowed; }
@@ -68,7 +71,13 @@ a { color: inherit; text-decoration: none; }
 .data-table td { height: 36px; padding: 0 8px; border-bottom: 1px solid #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .data-table tbody tr:nth-child(even) td { background: #f8fafc; }
 .data-table .is-sticky-left { position: sticky; left: 0; z-index: 2; }
+.data-table .is-sticky-left-2 { z-index: 2; }
 .data-table .is-sticky-right { position: sticky; right: 0; z-index: 2; }
+.data-table__sort { all: unset; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.data-table__sort:disabled { cursor: default; }
+.data-table__sort-icon { font-size: 10px; opacity: .65; }
+.data-table-floating-scrollbar { position: fixed; bottom: 0; z-index: 40; height: 16px; overflow-x: auto; overflow-y: hidden; background: rgb(241 245 249 / 94%); border-top: 1px solid var(--color-border); }
+.data-table-floating-scrollbar__inner { height: 1px; }
 /* Непрозрачный фон закрепленных колонок должен перебивать чередование строк выше. */
 .data-table th.is-sticky-left, .data-table th.is-sticky-right,
 .data-table tbody tr td.is-sticky-left, .data-table tbody tr td.is-sticky-right { background: #334155; color: #fff; }
@@ -108,6 +117,11 @@ a { color: inherit; text-decoration: none; }
 .gis-map { height: 100%; min-height: 600px; background: #e2e8f0; position: relative; overflow: hidden; }
 .gis-map-shell--fullscreen .gis-map { height: calc(100vh - 24px); border-radius: var(--radius); }
 .gis-map__empty { position: absolute; left: 50%; top: 50%; z-index: 4; width: 320px; transform: translate(-50%, -50%); pointer-events: none; }
+.report-prefilled { margin-bottom: 16px; padding: 12px; border: 1px dashed var(--color-border); border-radius: var(--radius); background: #f1f5f9; }
+.report-prefilled .input { color: #94a3b8; background: #e2e8f0; }
+.gis-search-results { display: grid; gap: 4px; max-height: 140px; overflow: auto; margin-bottom: 10px; padding: 6px; border: 1px solid var(--color-border); border-radius: var(--radius); background: #fff; }
+.gis-search-results button { text-align: left; border: 0; background: transparent; padding: 6px 8px; border-radius: var(--radius); cursor: pointer; font-size: 13px; }
+.gis-search-results button:hover { background: #dbeafe; }
 .gis-mini { position: relative; height: 260px; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; background: #e2e8f0; }
 .gis-mini__empty { position: absolute; left: 12px; bottom: 12px; max-width: 360px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: var(--radius); background: #fff; color: var(--color-muted); font-size: 13px; z-index: 3; }
 .gis-map-toolbar { position: absolute; left: 16px; top: 16px; z-index: 5; display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid rgb(148 163 184 / 70%); border-radius: var(--radius); background: rgb(255 255 255 / 88%); backdrop-filter: blur(8px); box-shadow: 0 10px 24px rgb(15 23 42 / 14%); }

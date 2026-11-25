@@ -42,12 +42,6 @@ class AreaState(models.TextChoices):
     READY_TO_CLOSE = 'ГОТОВ К ЗАКРЫТИЮ', 'ГОТОВ К ЗАКРЫТИЮ'
 
 
-class ContractorType(models.TextChoices):
-    CONTRACTOR = 'Подрядчик', 'Подрядчик'
-    URTS = 'УРТС', 'УРТС'
-    SECTION = 'Участок', 'Участок'
-
-
 class Damage(models.Model):
     id = models.CharField(max_length=64, primary_key=True, default=generate_damage_id, editable=False)
     district = models.ForeignKey(District, on_delete=models.PROTECT, related_name='damages')
@@ -64,14 +58,15 @@ class Damage(models.Model):
     damage_description = models.TextField()
     order_kind = models.CharField(max_length=32, choices=OrderKind.choices, null=True, blank=True)
     green_zone_area = models.IntegerField(default=0)
-    asphalt_area = models.IntegerField(default=0)
-    improvement_main = models.BooleanField(default=False)
-    improvement_inner_road = models.BooleanField(default=False)
-    improvement_sidewalk = models.BooleanField(default=False)
-    improvement_blind_area = models.BooleanField(default=False)
+    # Площади благоустройства, м². Раньше были булевыми признаками.
+    improvement_main = models.IntegerField(default=0)
+    improvement_inner_road = models.IntegerField(default=0)
+    improvement_sidewalk = models.IntegerField(default=0)
+    improvement_blind_area = models.IntegerField(default=0)
     curb_count = models.IntegerField(default=0)
     area_state = models.CharField(max_length=32, choices=AreaState.choices)
-    contractor_type = models.CharField(max_length=32, choices=ContractorType.choices)
+    # Исполнитель благоустройства: свободный текст (ООППР заполняет вручную).
+    contractor_type = models.CharField(max_length=512, blank=True, default='')
     contract_number = models.CharField(max_length=128, blank=True)
     contractor_request_date = models.DateField(null=True, blank=True)
     planned_finish_date = models.DateField(null=True, blank=True)
@@ -131,3 +126,24 @@ class AuditEvent(models.Model):
 
     def __str__(self) -> str:
         return f'{self.entity_type}:{self.entity_id} {self.field_name}'
+
+
+class RequestArchive(models.Model):
+    """Архив заявок на восстановление благоустройства (скан рукописной заявки)."""
+
+    id = models.CharField(max_length=64, primary_key=True, default=generate_audit_id, editable=False)
+    district = models.ForeignKey(District, on_delete=models.SET_NULL, null=True, blank=True, related_name='request_archives')
+    request_date = models.DateField()
+    contractor = models.CharField(max_length=512, blank=True, default='')
+    addresses = models.TextField(blank=True, default='')
+    file = models.FileField(upload_to='request_archives/%Y/%m/', blank=True)
+    file_name = models.CharField(max_length=255, blank=True, default='')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='request_archives')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-request_date', '-created_at']
+
+    def __str__(self) -> str:
+        return f'{self.request_date} {self.contractor}'

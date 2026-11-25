@@ -4,6 +4,7 @@ export type Permission =
   | 'damage.create'
   | 'damage.read'
   | 'damage.update'
+  | 'damage.orderFields.update'
   | 'order.read'
   | 'order.update'
   | 'ooppprFields.update'
@@ -12,14 +13,18 @@ export type Permission =
   | 'users.update'
   | 'users.delete'
   | 'reports.createReference'
-  | 'reports.createDamageCard';
+  | 'reports.createDamageCard'
+  | 'requests.read'
+  | 'requests.create'
+  | 'requests.delete';
 
 export const permissionMatrix: Record<Permission, UserRole[]> = {
   'damage.create': ['district_damage', 'district_order', 'full_access', 'admin'],
   'damage.read': ['district_damage', 'district_order', 'oopppr', 'full_access', 'admin'],
-  'damage.update': ['district_damage', 'district_order', 'full_access', 'admin'],
+  'damage.update': ['district_damage', 'full_access', 'admin'],
+  'damage.orderFields.update': ['district_order', 'full_access', 'admin'],
   'order.read': ['district_damage', 'district_order', 'oopppr', 'full_access', 'admin'],
-  'order.update': ['district_damage', 'district_order', 'full_access', 'admin'],
+  'order.update': ['district_order', 'full_access', 'admin'],
   'ooppprFields.update': ['oopppr', 'full_access', 'admin'],
   'users.read': ['admin'],
   'users.create': ['admin'],
@@ -27,6 +32,9 @@ export const permissionMatrix: Record<Permission, UserRole[]> = {
   'users.delete': ['admin'],
   'reports.createReference': ['oopppr', 'full_access', 'admin'],
   'reports.createDamageCard': ['district_damage', 'district_order', 'full_access', 'admin'],
+  'requests.read': ['district_order', 'full_access', 'admin'],
+  'requests.create': ['district_order', 'full_access', 'admin'],
+  'requests.delete': ['district_order', 'full_access', 'admin'],
 };
 
 export const hasPermission = (role: UserRole | undefined, permission: Permission) =>

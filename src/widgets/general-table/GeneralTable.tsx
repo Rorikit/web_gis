@@ -4,13 +4,12 @@ import type { Damage } from '@/entities';
 import { districts } from '@/shared/constants/districts';
 import { Badge, Button, DataTable } from '@/shared/ui';
 
-const yesNo = (value: boolean) => (value ? 'Да' : 'Нет');
 const orDash = (value: string | number | null | undefined) => (value === null || value === undefined || value === '' ? '-' : value);
 
 const columns: ColumnDef<Damage>[] = [
   { id: 'rowNumber', header: '№ п/п', cell: ({ row }) => row.index + 1, size: 70 },
-  { header: 'Район', cell: ({ row }) => districts.find((item) => item.id === row.original.districtId)?.name ?? '-' },
   { header: 'Адрес', accessorKey: 'address' },
+  { header: 'Район', cell: ({ row }) => districts.find((item) => item.id === row.original.districtId)?.name ?? '-' },
   { header: 'ОТ/ГВС', accessorKey: 'networkType' },
   { header: 'Дата обнаружения', accessorKey: 'detectedAt' },
   { header: 'Дата устранения', accessorKey: 'fixedAt', cell: ({ getValue }) => String(getValue() ?? '-') },
@@ -23,17 +22,15 @@ const columns: ColumnDef<Damage>[] = [
   { header: 'Характер повреждения', accessorKey: 'damageDescription', cell: ({ getValue }) => orDash(getValue() as string) },
   { header: 'Текущий/Гарантийный', accessorKey: 'orderKind', cell: ({ getValue }) => String(getValue() ?? '-') },
   { header: 'З/зона, м²', accessorKey: 'greenZoneArea' },
-  { header: 'Асфальт, м²', accessorKey: 'asphaltArea' },
-  { header: 'Основная', accessorKey: 'improvementMain', cell: ({ getValue }) => yesNo(getValue() as boolean) },
-  { header: 'Внутрикварт. дорога', accessorKey: 'improvementInnerRoad', cell: ({ getValue }) => yesNo(getValue() as boolean) },
-  { header: 'Тротуар', accessorKey: 'improvementSidewalk', cell: ({ getValue }) => yesNo(getValue() as boolean) },
-  { header: 'Отмостка', accessorKey: 'improvementBlindArea', cell: ({ getValue }) => yesNo(getValue() as boolean) },
+  { header: 'Проезжая часть, м²', accessorKey: 'improvementMain' },
+  { header: 'Внутрикварт. дорога, м²', accessorKey: 'improvementInnerRoad' },
+  { header: 'Тротуар, м²', accessorKey: 'improvementSidewalk' },
+  { header: 'Отмостка, м²', accessorKey: 'improvementBlindArea' },
   { header: 'Бордюр/поребрик, шт', accessorKey: 'curbCount' },
   { header: 'Состояние участка', accessorKey: 'areaState' },
   { header: 'Исполнитель', accessorKey: 'contractorType' },
   { header: '№ договора', accessorKey: 'contractNumber', cell: ({ getValue }) => orDash(getValue() as string) },
   { header: 'Дата подачи заявки', accessorKey: 'contractorRequestDate', cell: ({ getValue }) => String(getValue() ?? '-') },
-  { header: 'Срок выполнения по графику', accessorKey: 'plannedFinishDate', cell: ({ getValue }) => String(getValue() ?? '-') },
   { header: 'Примечание', accessorKey: 'note', cell: ({ getValue }) => orDash(getValue() as string) },
   { header: 'Дата закрытия ордера', accessorKey: 'orderClosedAt', cell: ({ getValue }) => String(getValue() ?? '-') },
   { header: 'Фотоотчёт', cell: ({ row }) => `${row.original.photos.length} фото` },

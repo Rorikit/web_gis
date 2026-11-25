@@ -11,7 +11,7 @@ import { GisMiniPreview } from '@/features/gis/ui/GisMiniPreview';
 import { GisPointPicker } from '@/features/gis/ui/GisPointPicker';
 import { hasPermission } from '@/features/permissions/model/permissions';
 import { DamageCardReportModal } from '@/features/reports/ui/DamageCardReportModal';
-import { Button, Checkbox, FormField, Input, Select, Tabs, Textarea } from '@/shared/ui';
+import { Button, FormField, Input, Select, Tabs, Textarea } from '@/shared/ui';
 
 const schema = z.object({
   address: z.string(),
@@ -23,13 +23,6 @@ const schema = z.object({
   disconnectedAddresses: z.string(),
   damageDescription: z.string(),
   note: z.string(),
-  greenZoneArea: z.number(),
-  asphaltArea: z.number(),
-  curbCount: z.number(),
-  improvementMain: z.boolean(),
-  improvementInnerRoad: z.boolean(),
-  improvementSidewalk: z.boolean(),
-  improvementBlindArea: z.boolean(),
   orderNumber: z.string(),
   orderOpenedAt: z.string(),
   orderValidUntil: z.string(),
@@ -48,13 +41,6 @@ const toFormValues = (damage: Damage): DamageForm => ({
   disconnectedAddresses: damage.disconnectedAddresses,
   damageDescription: damage.damageDescription,
   note: damage.note,
-  greenZoneArea: damage.greenZoneArea,
-  asphaltArea: damage.asphaltArea,
-  curbCount: damage.curbCount,
-  improvementMain: damage.improvementMain,
-  improvementInnerRoad: damage.improvementInnerRoad,
-  improvementSidewalk: damage.improvementSidewalk,
-  improvementBlindArea: damage.improvementBlindArea,
   orderNumber: damage.orderNumber,
   orderOpenedAt: damage.orderOpenedAt ?? '',
   orderValidUntil: damage.orderValidUntil ?? '',
@@ -73,26 +59,38 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
   const savePoint = useSaveDamagePoint(damage.id);
   const uploadPhoto = useUploadDamagePhoto(damage.id);
   const openOrder = useOpenDamageOrder(damage.id);
-  const canEditMain = hasPermission(user?.role, 'damage.update');
+  const canEditDamage = hasPermission(user?.role, 'damage.update');
+  const canEditOrderFields = hasPermission(user?.role, 'damage.orderFields.update');
+  const canBuildReport = hasPermission(user?.role, 'reports.createDamageCard');
   const { register, handleSubmit, reset } = useForm<DamageForm>({
     defaultValues: toFormValues(damage),
   });
 
-  const disabled = !canEditMain || update.isPending;
+  const disabled = !canEditDamage || update.isPending;
+  const orderDisabled = !canEditOrderFields || update.isPending;
+  // После заполнения номера ордера адрес правит только роль «Район: ордера».
+  const addressLocked = Boolean(damage.orderNumber.trim()) && !canEditOrderFields;
+
   const onSubmit = (values: DamageForm) => {
     const result = schema.safeParse(values);
-    if (result.success) {
-      const { orderNumber, orderOpenedAt, orderValidUntil, orderClosedAt, ...mainFields } = result.data;
-      const orderFields = damage.orderOpenedAt
-        ? {
-            orderNumber,
-            orderOpenedAt: orderOpenedAt || null,
-            orderValidUntil: orderValidUntil || null,
-            orderClosedAt: orderClosedAt || null,
-          }
-        : {};
-      update.mutate({ ...mainFields, ...orderFields, fixedAt: mainFields.fixedAt || null }, { onSuccess: () => navigate('/damages') });
+    if (!result.success) return;
+
+    const { orderNumber, orderOpenedAt, orderValidUntil, orderClosedAt, ...mainFields } = result.data;
+    const payload: Record<string, unknown> = {};
+
+    if (canEditDamage) {
+      Object.assign(payload, mainFields, { fixedAt: mainFields.fixedAt || null });
     }
+    if (canEditOrderFields && damage.orderOpenedAt) {
+      Object.assign(payload, {
+        orderNumber,
+        orderOpenedAt: orderOpenedAt || null,
+        orderValidUntil: orderValidUntil || null,
+        orderClosedAt: orderClosedAt || null,
+      });
+    }
+
+    update.mutate(payload, { onSuccess: () => navigate('/damages') });
   };
 
   const tabs = useMemo(
@@ -102,7 +100,12 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
         label: 'Основное',
         content: (
           <div className="form-grid">
-            <FormField label="Адрес"><Input disabled={disabled} {...register('address')} /></FormField>
+            <FormField
+              label="Адрес"
+              hint={addressLocked ? 'После заполнения номера ордера адрес меняет только район: ордера' : undefined}
+            >
+              <Input disabled={disabled || addressLocked} {...register('address')} />
+            </FormField>
             <FormField label="ОТ/ГВС">
               <Select disabled={disabled} {...register('networkType')}>
                 <option>ОТ</option>
@@ -116,7 +119,9 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
               </Select>
             </FormField>
             <FormField label="Дата обнаружения"><Input type="date" disabled={disabled} {...register('detectedAt')} /></FormField>
-            <FormField label="Дата устранения"><Input type="date" disabled={disabled} {...register('fixedAt')} /></FormField>
+            <FormField label="Дата устранения" hint="После заполнения повреждение уходит в архив">
+              <Input type="date" disabled={disabled} {...register('fixedAt')} />
+            </FormField>
             <FormField label="Источник тепла"><Input disabled={disabled} {...register('heatSource')} /></FormField>
             <FormField label="Адреса отключенных абонентов"><Textarea disabled={disabled} {...register('disconnectedAddresses')} /></FormField>
             <FormField label="Характер повреждения"><Textarea disabled={disabled} {...register('damageDescription')} /></FormField>
@@ -129,20 +134,25 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
         label: 'Ордер',
         content: damage.orderOpenedAt ? (
           <div className="form-grid">
-            <FormField label="№ ордера"><Input disabled={disabled} {...register('orderNumber')} /></FormField>
-            <FormField label="Дата открытия ордера"><Input type="date" disabled={disabled} {...register('orderOpenedAt')} /></FormField>
-            <FormField label="Ордер действует до"><Input type="date" disabled={disabled} {...register('orderValidUntil')} /></FormField>
-            <FormField label="Дата закрытия ордера"><Input type="date" disabled={disabled} {...register('orderClosedAt')} /></FormField>
+            <FormField label="№ ордера"><Input disabled={orderDisabled} {...register('orderNumber')} /></FormField>
+            <FormField label="Дата открытия ордера"><Input type="date" disabled={orderDisabled} {...register('orderOpenedAt')} /></FormField>
+            <FormField label="Ордер действует до"><Input type="date" disabled={orderDisabled} {...register('orderValidUntil')} /></FormField>
+            <FormField label="Дата закрытия ордера"><Input type="date" disabled={orderDisabled} {...register('orderClosedAt')} /></FormField>
             <div className="details-item" style={{ gridColumn: '1 / -1' }}>
               <span>Перейти к ордеру</span><Link to={`/orders/${damage.id}`}>Открыть карточку ордера</Link>
             </div>
+            {!canEditOrderFields && (
+              <div className="details-item" style={{ gridColumn: '1 / -1' }}>
+                <span>Права</span>Поля ордера доступны только роли «Район: ордера»
+              </div>
+            )}
           </div>
         ) : (
           <div className="form-grid">
             <FormField label="№ ордера (можно заполнить позже)">
               <Input
                 value={orderNumberDraft}
-                disabled={!canEditMain || openOrder.isPending}
+                disabled={orderDisabled}
                 placeholder="Введите номер ордера"
                 onChange={(event) => setOrderNumberDraft(event.target.value)}
               />
@@ -150,40 +160,31 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
             <div className="details-item" style={{ gridColumn: '1 / -1' }}>
               <span>Статус</span>Ордер не открыт — повреждение может существовать без ордера
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <Button
-                type="button"
-                disabled={!canEditMain || openOrder.isPending}
-                onClick={() =>
-                  openOrder.mutate(
-                    { orderNumber: orderNumberDraft.trim() },
-                    {
-                      onSuccess: (updated) => {
-                        reset(toFormValues(updated));
-                        setOrderNumberDraft('');
+            {canEditOrderFields ? (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Button
+                  type="button"
+                  disabled={openOrder.isPending}
+                  onClick={() =>
+                    openOrder.mutate(
+                      { orderNumber: orderNumberDraft.trim() },
+                      {
+                        onSuccess: (updated) => {
+                          reset(toFormValues(updated));
+                          setOrderNumberDraft('');
+                        },
                       },
-                    },
-                  )
-                }
-              >
-                {openOrder.isPending ? 'Открытие…' : 'Открыть ордер'}
-              </Button>
-            </div>
-          </div>
-        ),
-      },
-      {
-        id: 'improvement',
-        label: 'Благоустройство',
-        content: (
-          <div className="form-grid">
-            <FormField label="Зеленая зона"><Input type="number" disabled={disabled} {...register('greenZoneArea', { valueAsNumber: true })} /></FormField>
-            <FormField label="Асфальт"><Input type="number" disabled={disabled} {...register('asphaltArea', { valueAsNumber: true })} /></FormField>
-            <FormField label="Бортовой камень"><Input type="number" disabled={disabled} {...register('curbCount', { valueAsNumber: true })} /></FormField>
-            <FormField label="Проезжая часть"><Checkbox disabled={disabled} {...register('improvementMain')} /></FormField>
-            <FormField label="Внутриквартальная дорога"><Checkbox disabled={disabled} {...register('improvementInnerRoad')} /></FormField>
-            <FormField label="Тротуар"><Checkbox disabled={disabled} {...register('improvementSidewalk')} /></FormField>
-            <FormField label="Отмостка"><Checkbox disabled={disabled} {...register('improvementBlindArea')} /></FormField>
+                    )
+                  }
+                >
+                  {openOrder.isPending ? 'Открытие…' : 'Открыть ордер'}
+                </Button>
+              </div>
+            ) : (
+              <div className="details-item" style={{ gridColumn: '1 / -1' }}>
+                <span>Права</span>Открыть ордер может роль «Район: ордера»
+              </div>
+            )}
           </div>
         ),
       },
@@ -195,7 +196,7 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
             <Button
               type="button"
               variant="secondary"
-              disabled={!canEditMain || uploadPhoto.isPending}
+              disabled={!canEditDamage || uploadPhoto.isPending}
               onClick={() => photoInputRef.current?.click()}
             >
               {uploadPhoto.isPending ? 'Загрузка…' : 'Загрузить фото'}
@@ -224,7 +225,7 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
       },
       { id: 'history', label: 'История', content: <AuditHistoryTable entityType="damage" entityId={damage.id} /> },
     ],
-    [damage, disabled, register, canEditMain, uploadPhoto, openOrder, orderNumberDraft, reset],
+    [damage, disabled, orderDisabled, addressLocked, register, canEditDamage, canEditOrderFields, uploadPhoto, openOrder, orderNumberDraft, reset],
   );
 
   return (
@@ -236,8 +237,8 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
         <div className="damage-gis-section__header">
           <h3 className="section-title">GIS</h3>
           <div className="damage-gis-section__actions">
-            <Button type="button" variant="secondary" onClick={() => setPickerOpen(true)}>Указать точку</Button>
-            <Button type="button" variant="secondary" onClick={() => setPickerOpen(true)}>Изменить</Button>
+            <Button type="button" variant="secondary" disabled={!canEditDamage} onClick={() => setPickerOpen(true)}>Указать точку</Button>
+            <Button type="button" variant="secondary" disabled={!canEditDamage} onClick={() => setPickerOpen(true)}>Изменить</Button>
             <Button type="button" variant="secondary" onClick={() => damage.gisPoint?.mapUrl && window.open(damage.gisPoint.mapUrl)}>Открыть карту</Button>
           </div>
         </div>
@@ -265,9 +266,13 @@ export const DamageCard = ({ damage }: { damage: Damage }) => {
       </section>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-        <Button type="submit" disabled={disabled}>Сохранить</Button>
+        {(canEditDamage || canEditOrderFields) && (
+          <Button type="submit" disabled={update.isPending}>Сохранить</Button>
+        )}
         <Button type="button" variant="secondary" onClick={() => reset()}>Отмена</Button>
-        <Button type="button" variant="secondary" onClick={() => setReportOpen(true)}>Карта повреждения DOCX</Button>
+        {canBuildReport && (
+          <Button type="button" variant="secondary" onClick={() => setReportOpen(true)}>Карта повреждения DOCX</Button>
+        )}
       </div>
       <GisPointPicker
         open={pickerOpen}

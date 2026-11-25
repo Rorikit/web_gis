@@ -18,6 +18,7 @@ const itemsByRole: Record<UserRole, Array<{ label: string; to: string }>> = {
     { label: 'Карта ордеров', to: '/map/orders' },
     { label: 'Архив повреждений', to: '/damages/archive' },
     { label: 'Архив ордеров', to: '/orders/archive' },
+    { label: 'Архив заявок', to: '/requests/archive' },
   ],
   oopppr: [
     { label: 'ООППР', to: '/oopppr' },
@@ -32,6 +33,7 @@ const itemsByRole: Record<UserRole, Array<{ label: string; to: string }>> = {
     { label: 'Карта ордеров', to: '/map/orders' },
     { label: 'Архив повреждений', to: '/damages/archive' },
     { label: 'Архив ордеров', to: '/orders/archive' },
+    { label: 'Архив заявок', to: '/requests/archive' },
   ],
   admin: [
     { label: 'Администратор', to: '/admin' },
@@ -39,6 +41,7 @@ const itemsByRole: Record<UserRole, Array<{ label: string; to: string }>> = {
     { label: 'Ордера', to: '/orders' },
     { label: 'Карта ордеров', to: '/map/orders' },
     { label: 'Архив администратора', to: '/admin/archive' },
+    { label: 'Архив заявок', to: '/requests/archive' },
     { label: 'Пользователи', to: '/admin/users' },
     { label: 'Полный доступ', to: '/full-access' },
   ],

@@ -14,7 +14,7 @@ export const DamageDetailsPage = () => {
   if (!canAccessDistrict(user?.role, user?.districtId, query.data.districtId)) return <Navigate to="/access-denied" replace />;
   return (
     <>
-      <PageHeader title={`Повреждение ${query.data.id}`} subtitle={query.data.address} />
+      <PageHeader title="Повреждение" subtitle={query.data.address} />
       <DamageCard damage={query.data} />
     </>
   );

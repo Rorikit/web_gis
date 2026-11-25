@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.accounts.models import District, UserRole
-from apps.incidents.models import AreaState, ContractorType, Damage, DamageType, NetworkType, OrderKind
+from apps.incidents.models import AreaState, Damage, DamageType, NetworkType, OrderKind, RequestArchive
 
 User = get_user_model()
 
@@ -52,16 +52,14 @@ class IncidentsApiTests(APITestCase):
             damage_description='Повреждение трубопровода',
             order_kind=OrderKind.CURRENT,
             green_zone_area=12,
-            asphalt_area=8,
-            improvement_main=True,
-            improvement_inner_road=False,
-            improvement_sidewalk=True,
-            improvement_blind_area=False,
+            improvement_main=8,
+            improvement_inner_road=0,
+            improvement_sidewalk=4,
+            improvement_blind_area=0,
             curb_count=3,
             area_state=AreaState.IN_PROGRESS,
-            contractor_type=ContractorType.CONTRACTOR,
+            contractor_type='Подрядчик',
             contract_number='Д-44/26',
-            planned_finish_date=date(2026, 5, 28),
             note='Контроль восстановления',
             archived=False,
         )
@@ -81,16 +79,14 @@ class IncidentsApiTests(APITestCase):
             damage_description='Повреждение после испытаний',
             order_kind=OrderKind.GUARANTEE,
             green_zone_area=0,
-            asphalt_area=18,
-            improvement_main=True,
-            improvement_inner_road=True,
-            improvement_sidewalk=False,
-            improvement_blind_area=False,
+            improvement_main=18,
+            improvement_inner_road=6,
+            improvement_sidewalk=0,
+            improvement_blind_area=0,
             curb_count=0,
             area_state=AreaState.READY_TO_CLOSE,
-            contractor_type=ContractorType.URTS,
+            contractor_type='УРТС',
             contract_number='',
-            planned_finish_date=date(2026, 5, 25),
             archived=False,
         )
 
@@ -103,7 +99,7 @@ class IncidentsApiTests(APITestCase):
             damage_type=DamageType.CURRENT,
             damage_description='Повреждение без ордера',
             area_state=AreaState.IN_PROGRESS,
-            contractor_type=ContractorType.CONTRACTOR,
+            contractor_type='Подрядчик',
             archived=False,
         )
 
@@ -117,7 +113,7 @@ class IncidentsApiTests(APITestCase):
         self.assertIn(self.damage_central.id, ids)
 
     def test_open_order_uses_provided_number_and_surfaces_in_orders_list(self):
-        self.client.login(username='ivanov', password='ivanov')
+        self.client.login(username='admin', password='admin')
 
         response = self.client.post(
             f'/damages/{self.damage_without_order.id}/open-order',
@@ -139,7 +135,7 @@ class IncidentsApiTests(APITestCase):
         self.assertEqual(again.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_open_order_without_number_keeps_number_blank(self):
-        self.client.login(username='ivanov', password='ivanov')
+        self.client.login(username='admin', password='admin')
 
         response = self.client.post(f'/damages/{self.damage_without_order.id}/open-order')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -148,7 +144,7 @@ class IncidentsApiTests(APITestCase):
         self.assertIsNotNone(body['orderOpenedAt'])
 
     def test_order_number_can_be_edited_after_opening(self):
-        self.client.login(username='ivanov', password='ivanov')
+        self.client.login(username='admin', password='admin')
 
         response = self.client.put(
             f'/orders/{self.damage_central.id}',
@@ -184,19 +180,105 @@ class IncidentsApiTests(APITestCase):
         ids = {item['id'] for item in body}
         self.assertEqual(ids, {self.damage_central.id, self.damage_without_order.id})
 
-    def test_damage_update_allowed_for_order_role_same_district(self):
-        # ТЗ раздел Б: техник по повреждениям и техник по ордерам одного района имеют
-        # одинаковый набор прав на поля повреждения/ордера.
+    def test_damage_role_edits_damage_fields_but_not_order_fields(self):
+        self.client.login(username='ivanov', password='ivanov')
+
+        response = self.client.put(
+            f'/damages/{self.damage_central.id}',
+            {'note': 'new note', 'orderNumber': 'ЧУЖОЙ-НОМЕР'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.damage_central.refresh_from_db()
+        self.assertEqual(self.damage_central.note, 'new note')
+        self.assertEqual(self.damage_central.order_number, 'ОР-2026-0012')
+
+    def test_order_role_edits_order_fields_but_not_damage_fields(self):
         self.client.login(username='sidorov', password='sidorov')
 
         response = self.client.put(
             f'/damages/{self.damage_north.id}',
-            {'note': 'new note'},
+            {'note': 'не должно примениться', 'orderNumber': 'ОР-2026-7777', 'improvementMain': 25},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.damage_north.refresh_from_db()
-        self.assertEqual(self.damage_north.note, 'new note')
+        self.assertEqual(self.damage_north.note, '')
+        self.assertEqual(self.damage_north.order_number, 'ОР-2026-7777')
+        self.assertEqual(self.damage_north.improvement_main, 25)
+
+    def test_order_role_cannot_archive_damage(self):
+        self.client.login(username='sidorov', password='sidorov')
+        response = self.client.post(f'/damages/{self.damage_north.id}/archive')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_damage_role_cannot_edit_order_card(self):
+        self.client.login(username='ivanov', password='ivanov')
+        response = self.client.put(
+            f'/orders/{self.damage_central.id}',
+            {'orderNumber': 'ОР-2026-5555'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_address_locked_after_order_number_for_damage_role(self):
+        self.client.login(username='ivanov', password='ivanov')
+        response = self.client.put(
+            f'/damages/{self.damage_central.id}',
+            {'address': 'ул. Другая, 1'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_address_editable_by_order_role_after_order_number(self):
+        self.client.login(username='sidorov', password='sidorov')
+        response = self.client.put(
+            f'/damages/{self.damage_north.id}',
+            {'address': 'пр. Мира, 80'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.damage_north.refresh_from_db()
+        self.assertEqual(self.damage_north.address, 'пр. Мира, 80')
+
+    def test_fixed_at_moves_damage_to_archive(self):
+        self.client.login(username='ivanov', password='ivanov')
+        response = self.client.put(
+            f'/damages/{self.damage_central.id}',
+            {'fixedAt': '2026-05-20'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.damage_central.refresh_from_db()
+        self.assertTrue(self.damage_central.archived)
+        self.assertEqual(self.damage_central.fixed_at, date(2026, 5, 20))
+
+    def test_requests_archive_crud(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self.client.login(username='sidorov', password='sidorov')
+        response = self.client.post(
+            '/requests',
+            {
+                'requestDate': '2026-05-21',
+                'contractor': 'ООО ТеплоСтрой',
+                'addresses': 'ул. Ленина, 12; пр. Мира, 78',
+                'file': SimpleUploadedFile('scan.pdf', b'%PDF-1.4 test', content_type='application/pdf'),
+            },
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        body = response.json()
+        self.assertEqual(body['contractor'], 'ООО ТеплоСтрой')
+        self.assertEqual(body['fileName'], 'scan.pdf')
+
+        listing = self.client.get('/requests')
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(listing.json()), 1)
+
+        deleted = self.client.delete(f"/requests/{body['id']}")
+        self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(RequestArchive.objects.count(), 0)
 
     def test_damage_update_forbidden_for_foreign_district_order_role(self):
         self.client.login(username='sidorov', password='sidorov')
@@ -236,9 +318,8 @@ class IncidentsApiTests(APITestCase):
         response = self.client.put(
             f'/orders/{self.damage_central.id}',
             {
-                'contractorType': 'УРТС',
+                'contractorType': 'ООО Ромашка',
                 'contractNumber': 'K-100',
-                'plannedFinishDate': '2026-06-01',
                 'note': 'ok',
                 'address': 'Адрес не должен обновиться',
             },
@@ -247,7 +328,7 @@ class IncidentsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.damage_central.refresh_from_db()
-        self.assertEqual(self.damage_central.contractor_type, 'УРТС')
+        self.assertEqual(self.damage_central.contractor_type, 'ООО Ромашка')
         self.assertEqual(self.damage_central.address, 'ул. Ленина, 12')
 
     def test_gis_save_point(self):
@@ -432,11 +513,11 @@ class IncidentsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.json()), 1)
 
-    def test_order_update_district_role_can_edit_order_dates(self):
-        self.client.login(username='ivanov', password='ivanov')
+    def test_order_update_order_role_can_edit_order_dates(self):
+        self.client.login(username='sidorov', password='sidorov')
 
         response = self.client.put(
-            f'/orders/{self.damage_central.id}',
+            f'/orders/{self.damage_north.id}',
             {
                 'openedAt': '2026-05-12',
                 'validUntil': '2026-07-01',
@@ -476,9 +557,9 @@ class IncidentsApiTests(APITestCase):
         body = response.json()
         for field in (
             'orderNumber', 'address', 'orderKind', 'openedAt', 'validUntil', 'closedAt',
-            'greenZoneArea', 'asphaltArea', 'improvementMain', 'improvementInnerRoad',
+            'greenZoneArea', 'improvementMain', 'improvementInnerRoad',
             'improvementSidewalk', 'improvementBlindArea', 'curbCount', 'areaState',
-            'contractorType', 'contractNumber', 'contractorRequestDate', 'plannedFinishDate',
+            'contractorType', 'contractNumber', 'contractorRequestDate',
             'note', 'photos', 'gisPoint',
         ):
             self.assertIn(field, body)
@@ -516,12 +597,12 @@ class IncidentsApiTests(APITestCase):
         self.assertTrue(len(response.content) > 0)
 
     def test_order_close_date_moves_order_to_archive(self):
-        self.client.login(username='ivanov', password='ivanov')
+        self.client.login(username='sidorov', password='sidorov')
 
-        self.client.put(f'/orders/{self.damage_central.id}', {'closedAt': '2026-06-20'}, format='json')
-        self.damage_central.refresh_from_db()
-        self.assertTrue(self.damage_central.archived)
+        self.client.put(f'/orders/{self.damage_north.id}', {'closedAt': '2026-06-20'}, format='json')
+        self.damage_north.refresh_from_db()
+        self.assertTrue(self.damage_north.archived)
 
-        self.client.put(f'/orders/{self.damage_central.id}', {'closedAt': None}, format='json')
-        self.damage_central.refresh_from_db()
-        self.assertFalse(self.damage_central.archived)
+        self.client.put(f'/orders/{self.damage_north.id}', {'closedAt': None}, format='json')
+        self.damage_north.refresh_from_db()
+        self.assertFalse(self.damage_north.archived)

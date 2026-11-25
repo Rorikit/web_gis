@@ -88,6 +88,8 @@ def _set_cell(cell, title: str, value: str = '', *, hint: str = '') -> None:
 
     value_paragraph = cell.add_paragraph()
     value_run = value_paragraph.add_run(value)
+    # Введенные значения в ячейках карты выделяются жирным шрифтом.
+    value_run.bold = True
     value_run.font.size = Pt(9)
 
 
@@ -227,17 +229,6 @@ def _write_header(sheet: Worksheet, columns: list[str]) -> None:
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
 
-def _improvement_summary(item: Damage) -> str:
-    parts = [
-        ('Основная', item.improvement_main),
-        ('Внутриквартальная дорога', item.improvement_inner_road),
-        ('Тротуар', item.improvement_sidewalk),
-        ('Отмостка', item.improvement_blind_area),
-    ]
-    selected = [label for label, flag in parts if flag]
-    return ', '.join(selected) if selected else '-'
-
-
 def build_current_table_workbook(items, entity_type: str) -> bytes:
     workbook = Workbook()
     sheet = workbook.active
@@ -247,11 +238,11 @@ def build_current_table_workbook(items, entity_type: str) -> bytes:
         sheet.title = 'Ордера'
         _write_header(sheet, [
             '№ п/п', 'Район', '№ ордера', 'Адрес', 'Текущ./Гарант.', 'Дата открытия ордера',
-            'Ордер открыт до', 'Дата закрытия ордера', 'з/зона, м2', 'Асфальт, м2',
-            'Основная/внутриквартальная дорога, тратуар, отмостка', 'бардюр/поребрик',
-            'Состояние участка', 'Подрядчик/УРТС/Участок', '№ договора',
+            'Ордер открыт до', 'Дата закрытия ордера', 'з/зона, м2', 'бордюр/поребрик, шт',
+            'Проезжая часть, м2', 'Внутриквартальная дорога, м2', 'Тротуар, м2', 'Отмостка, м2',
+            'Состояние участка', 'Исполнитель благоустройства', '№ договора',
             'Дата подачи заявки для восстановления благоустройства',
-            'Срок выполнения работ, согласно графика', 'Примечание', 'фотоотчет', 'геолакация на карте',
+            'Примечание', 'фотоотчет', 'геолакация на карте',
         ])
         for index, item in enumerate(items, start=1):
             point = getattr(item, 'gis_point', None)
@@ -265,14 +256,15 @@ def build_current_table_workbook(items, entity_type: str) -> bytes:
                 str(item.order_valid_until) if item.order_valid_until else '',
                 str(item.order_closed_at) if item.order_closed_at else '',
                 item.green_zone_area,
-                item.asphalt_area,
-                _improvement_summary(item),
                 item.curb_count,
+                item.improvement_main,
+                item.improvement_inner_road,
+                item.improvement_sidewalk,
+                item.improvement_blind_area,
                 item.area_state,
                 item.contractor_type,
                 item.contract_number,
                 str(item.contractor_request_date) if item.contractor_request_date else '',
-                str(item.planned_finish_date) if item.planned_finish_date else '',
                 item.note,
                 f'{len(item.photos.all())} фото',
                 f'{point.latitude}, {point.longitude}' if point else '',
@@ -284,11 +276,11 @@ def build_current_table_workbook(items, entity_type: str) -> bytes:
             '№ п/п', 'Район', 'Адрес', 'ОТ/ГВС', 'Дата обнаружения', 'Дата устранения', '№ ордера',
             'Дата открытия ордера', 'Ордер открыт до', 'От какого источника запитан',
             'Текущее/Гидравлическое', 'Адреса отключенных абонентов', 'Характер повреждения',
-            'Текущ./Гарант.', 'з/зона, м2', 'Асфальт, м2', 'Основная', 'Внутриквартальная дорога',
-            'Тротуар', 'Отмостка', 'бардюр/поребрик', 'Состояние участка', 'Подрядчик/УРТС/Участок',
-            '№ договора', 'Дата подачи заявки для восстановления благоустройства',
-            'Срок выполнения работ, согласно графика', 'Примечание', 'Дата закрытия ордера',
-            'фотоотчет', 'геолакация на карте',
+            'Текущ./Гарант.', 'з/зона, м2', 'Проезжая часть, м2', 'Внутриквартальная дорога, м2',
+            'Тротуар, м2', 'Отмостка, м2', 'бордюр/поребрик, шт', 'Состояние участка',
+            'Исполнитель благоустройства', '№ договора',
+            'Дата подачи заявки для восстановления благоустройства',
+            'Примечание', 'Дата закрытия ордера', 'фотоотчет', 'геолакация на карте',
         ])
         for index, item in enumerate(items, start=1):
             point = getattr(item, 'gis_point', None)
@@ -308,17 +300,15 @@ def build_current_table_workbook(items, entity_type: str) -> bytes:
                 item.damage_description,
                 item.order_kind or '',
                 item.green_zone_area,
-                item.asphalt_area,
-                'Да' if item.improvement_main else 'Нет',
-                'Да' if item.improvement_inner_road else 'Нет',
-                'Да' if item.improvement_sidewalk else 'Нет',
-                'Да' if item.improvement_blind_area else 'Нет',
+                item.improvement_main,
+                item.improvement_inner_road,
+                item.improvement_sidewalk,
+                item.improvement_blind_area,
                 item.curb_count,
                 item.area_state,
                 item.contractor_type,
                 item.contract_number,
                 str(item.contractor_request_date) if item.contractor_request_date else '',
-                str(item.planned_finish_date) if item.planned_finish_date else '',
                 item.note,
                 str(item.order_closed_at) if item.order_closed_at else '',
                 f'{len(item.photos.all())} фото',

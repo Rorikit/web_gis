@@ -5,7 +5,6 @@ export type NetworkType = 'ОТ' | 'ГВС';
 export type DamageType = 'Текущее' | 'Гидравлическое';
 export type OrderKind = 'Текущий' | 'Гарантийный';
 export type AreaState = 'В РАБОТЕ' | 'ГОТОВ К ЗАКРЫТИЮ';
-export type ContractorType = 'Подрядчик' | 'УРТС' | 'Участок';
 
 export type Damage = {
   id: string;
@@ -23,17 +22,15 @@ export type Damage = {
   damageDescription: string;
   orderKind: OrderKind | null;
   greenZoneArea: number;
-  asphaltArea: number;
-  improvementMain: boolean;
-  improvementInnerRoad: boolean;
-  improvementSidewalk: boolean;
-  improvementBlindArea: boolean;
+  improvementMain: number;
+  improvementInnerRoad: number;
+  improvementSidewalk: number;
+  improvementBlindArea: number;
   curbCount: number;
   areaState: AreaState;
-  contractorType: ContractorType;
+  contractorType: string;
   contractNumber: string;
   contractorRequestDate: string | null;
-  plannedFinishDate: string | null;
   note: string;
   orderClosedAt: string | null;
   gisPoint: GisPoint | null;

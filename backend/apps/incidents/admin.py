@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AuditEvent, Damage, GisPoint, Photo
+from .models import AuditEvent, Damage, GisPoint, Photo, RequestArchive
 
 
 @admin.register(Damage)
@@ -27,3 +27,10 @@ class AuditEventAdmin(admin.ModelAdmin):
     list_display = ('id', 'entity_type', 'entity_id', 'field_name', 'user_name', 'created_at')
     list_filter = ('entity_type', 'field_name')
     search_fields = ('id', 'entity_id', 'user_name', 'field_name')
+
+
+@admin.register(RequestArchive)
+class RequestArchiveAdmin(admin.ModelAdmin):
+    list_display = ('id', 'request_date', 'district', 'contractor', 'file_name', 'created_at')
+    list_filter = ('district', 'request_date')
+    search_fields = ('id', 'contractor', 'addresses')

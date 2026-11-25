@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import District
-from .models import AreaState, AuditEvent, ContractorType, Damage, DamageType, NetworkType
+from .models import AreaState, AuditEvent, Damage, DamageType, NetworkType
 
 
 DAMAGE_FIELD_MAP = {
@@ -15,28 +15,11 @@ DAMAGE_FIELD_MAP = {
     'networkType': 'network_type',
     'detectedAt': 'detected_at',
     'fixedAt': 'fixed_at',
-    'orderNumber': 'order_number',
-    'orderOpenedAt': 'order_opened_at',
-    'orderValidUntil': 'order_valid_until',
     'heatSource': 'heat_source',
     'damageType': 'damage_type',
     'disconnectedAddresses': 'disconnected_addresses',
     'damageDescription': 'damage_description',
-    'orderKind': 'order_kind',
-    'greenZoneArea': 'green_zone_area',
-    'asphaltArea': 'asphalt_area',
-    'improvementMain': 'improvement_main',
-    'improvementInnerRoad': 'improvement_inner_road',
-    'improvementSidewalk': 'improvement_sidewalk',
-    'improvementBlindArea': 'improvement_blind_area',
-    'curbCount': 'curb_count',
-    'areaState': 'area_state',
-    'contractorType': 'contractor_type',
-    'contractNumber': 'contract_number',
-    'contractorRequestDate': 'contractor_request_date',
-    'plannedFinishDate': 'planned_finish_date',
     'note': 'note',
-    'orderClosedAt': 'order_closed_at',
     'archived': 'archived',
 }
 
@@ -51,8 +34,14 @@ ORDER_FIELD_MAP = {
     'contractorType': 'contractor_type',
     'contractNumber': 'contract_number',
     'contractorRequestDate': 'contractor_request_date',
-    'plannedFinishDate': 'planned_finish_date',
     'note': 'note',
+    # Благоустройство относится к ордеру.
+    'greenZoneArea': 'green_zone_area',
+    'curbCount': 'curb_count',
+    'improvementMain': 'improvement_main',
+    'improvementInnerRoad': 'improvement_inner_road',
+    'improvementSidewalk': 'improvement_sidewalk',
+    'improvementBlindArea': 'improvement_blind_area',
     # выставляется только самим бэкендом, в OrderWriteSerializer поля нет
     'archived': 'archived',
 }
@@ -80,17 +69,15 @@ def default_damage_payload(user) -> dict:
         'damageDescription': '',
         'orderKind': None,
         'greenZoneArea': 0,
-        'asphaltArea': 0,
-        'improvementMain': False,
-        'improvementInnerRoad': False,
-        'improvementSidewalk': False,
-        'improvementBlindArea': False,
+        'improvementMain': 0,
+        'improvementInnerRoad': 0,
+        'improvementSidewalk': 0,
+        'improvementBlindArea': 0,
         'curbCount': 0,
         'areaState': AreaState.IN_PROGRESS,
-        'contractorType': ContractorType.CONTRACTOR,
+        'contractorType': '',
         'contractNumber': '',
         'contractorRequestDate': None,
-        'plannedFinishDate': today + timedelta(days=14),
         'note': '',
         'orderClosedAt': None,
         'archived': False,

@@ -1,14 +1,20 @@
-import { districts } from '@/shared/constants/districts';
-import { Input, PageToolbar, Select } from '@/shared/ui';
+import type { PropsWithChildren } from 'react';
+import { Input, PageToolbar } from '@/shared/ui';
 
-export const TableToolbar = ({ search, onSearch }: { search: string; onSearch: (value: string) => void }) => (
+type TableToolbarProps = PropsWithChildren<{
+  search: string;
+  onSearch: (value: string) => void;
+  placeholder?: string;
+}>;
+
+export const TableToolbar = ({ search, onSearch, placeholder = 'Поиск по адресу или номеру', children }: TableToolbarProps) => (
   <PageToolbar>
-    <Input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Поиск по адресу или номеру" style={{ width: 320 }} />
-    <Select style={{ width: 180 }} defaultValue="">
-      <option value="">Все районы</option>
-      {districts.map((district) => (
-        <option key={district.id} value={district.id}>{district.name}</option>
-      ))}
-    </Select>
+    <Input
+      value={search}
+      onChange={(event) => onSearch(event.target.value)}
+      placeholder={placeholder}
+      style={{ width: 320 }}
+    />
+    {children}
   </PageToolbar>
 );

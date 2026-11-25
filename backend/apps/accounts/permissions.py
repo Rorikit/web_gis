@@ -10,9 +10,12 @@ PermissionName = str
 PERMISSION_MATRIX: dict[PermissionName, set[str]] = {
     'damage.create': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
     'damage.read': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
-    'damage.update': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    # Поля повреждения меняет только роль «Район: повреждения».
+    'damage.update': {UserRole.DISTRICT_DAMAGE, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    # Поля ордера в карточке повреждения меняет только роль «Район: ордера».
+    'damage.orderFields.update': {UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
     'order.read': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
-    'order.update': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    'order.update': {UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
     'ooppprFields.update': {UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
     'users.read': {UserRole.ADMIN},
     'users.create': {UserRole.ADMIN},
@@ -20,6 +23,9 @@ PERMISSION_MATRIX: dict[PermissionName, set[str]] = {
     'users.delete': {UserRole.ADMIN},
     'reports.createReference': {UserRole.OOPPPR, UserRole.FULL_ACCESS, UserRole.ADMIN},
     'reports.createDamageCard': {UserRole.DISTRICT_DAMAGE, UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    'requests.read': {UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    'requests.create': {UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
+    'requests.delete': {UserRole.DISTRICT_ORDER, UserRole.FULL_ACCESS, UserRole.ADMIN},
 }
 
 

@@ -179,7 +179,7 @@ export const GisMap = ({ orders }: { orders: Order[] }) => {
               <div className="details-item"><span>Исполнитель</span>{selected.contractorType}</div>
               <div className="details-item"><span>Открыт до</span>{selected.validUntil ?? '-'}</div>
               <div className="details-item"><span>№ договора</span>{selected.contractNumber || '-'}</div>
-              <div className="details-item"><span>Срок по графику</span>{selected.plannedFinishDate ?? '-'}</div>
+              <div className="details-item"><span>Закрыт</span>{selected.closedAt ?? '-'}</div>
             </div>
             <Button variant="secondary" onClick={() => window.location.assign(`/orders/${selected.id}`)}>Открыть запись</Button>
           </div>

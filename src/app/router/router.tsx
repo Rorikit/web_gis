@@ -20,6 +20,7 @@ import { OoppprPage } from '@/pages/oopppr/OoppprPage';
 import { OrderArchivePage } from '@/pages/order-archive/OrderArchivePage';
 import { OrderDetailsPage } from '@/pages/orders/OrderDetailsPage';
 import { OrdersPage } from '@/pages/orders/OrdersPage';
+import { RequestsArchivePage } from '@/pages/requests/RequestsArchivePage';
 import { UsersPage } from '@/pages/users/UsersPage';
 
 export const router = createBrowserRouter(
@@ -60,6 +61,12 @@ export const router = createBrowserRouter(
                 { path: '/oopppr', element: <OoppprPage /> },
                 { path: '/oopppr/archive', element: <OoppprArchivePage /> },
                 { path: '/full-access', element: <FullAccessPage /> },
+              ],
+            },
+            {
+              element: <RoleGuard permission="requests.read" />,
+              children: [
+                { path: '/requests/archive', element: <RequestsArchivePage /> },
               ],
             },
             {
